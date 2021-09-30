@@ -246,6 +246,24 @@ where
             // but it's still a client, so don't change any frame stuff, early return
             return Ok(()); // not really an error
         }
+        // check the window type, no dock windows
+        let reply = self
+            .conn
+            .get_property(
+                false,
+                ev.window,
+                self.net_atoms[ewmh::Net::WMWindowType as usize],
+                xproto::AtomEnum::ATOM,
+                0,
+                1024,
+            )?
+            .reply()?;
+        for prop in reply.value {
+            if prop == self.net_atoms[ewmh::Net::WMWindowTypeDock as usize] as u8 {
+                self.conn.map_window(ev.window)?.check()?;
+                return Ok(());
+            }
+        }
         // Start off by setting _NET_FRAME_EXTENTS
         self.conn
             .change_property32(
@@ -452,9 +470,7 @@ where
                 ev.window,
                 &xproto::ConfigureWindowAux::from_configure_request(ev)
                     .sibling(None)
-                    .stack_mode(None)
-                    .x(0)
-                    .y(self.config.title_height as i32),
+                    .stack_mode(None),
             )?
             .check()?;
         Ok(())
@@ -601,27 +617,15 @@ where
     }
 
     fn handle_configure_notify(&self, ev: &xproto::ConfigureNotifyEvent) -> Result<()> {
-        let (client, _) = self
+        let (client, client_idx) = self
             .find_client(|client| client.window == ev.window)
             .ok_or("configure_notify: configure on non client window, ignoring")?;
         self.conn
             .configure_window(
                 client.frame,
                 &xproto::ConfigureWindowAux::new()
-                    .x(ev.x as i32)
-                    .y(ev.y as i32)
                     .width(ev.width as u32)
                     .height((ev.height + 15) as u32),
-            )?
-            .check()?;
-        self.conn
-            .configure_window(
-                client.window,
-                &xproto::ConfigureWindowAux::new()
-                    .x(0)
-                    .y(15)
-                    .width(ev.width as u32)
-                    .height(ev.height as u32),
             )?
             .check()?;
         Ok(())
