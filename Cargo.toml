@@ -1,0 +1,22 @@
+[package]
+name = "rs"
+version = "0.1.0"
+edition = "2018"
+default-run = "rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+libc = "*"
+# x11 = { version = "*", features = ["xlib"] }
+x11rb = { version = "*", features = ["xinerama"] }
+# xcb = "*"
+
+[profile.release]
+lto = true
+opt-level = 'z'
+
+[[bin]]
+name = "wormc"
+path = "src/wormc.rs"
+
