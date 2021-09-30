@@ -1,16 +1,13 @@
 [package]
-name = "rs"
+name = "worm"
 version = "0.1.0"
 edition = "2018"
-default-run = "rs"
+default-run = "worm"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libc = "*"
-# x11 = { version = "*", features = ["xlib"] }
 x11rb = { version = "*", features = ["xinerama"] }
-# xcb = "*"
 
 [profile.release]
 lto = true
