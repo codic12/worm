@@ -232,6 +232,7 @@ where
             protocol::Event::UnmapNotify(ev) => self.handle_unmap_notify(ev)?,
             protocol::Event::DestroyNotify(ev) => self.handle_destroy_notify(ev)?,
             protocol::Event::ClientMessage(ev) => self.handle_client_message(ev)?,
+            protocol::Event::ConfigureNotify(ev) => self.handle_configure_notify(ev)?,
             _ => {}
         }
         Ok(())
@@ -596,6 +597,33 @@ where
                 _ => {}
             }
         }
+        Ok(())
+    }
+
+    fn handle_configure_notify(&self, ev: &xproto::ConfigureNotifyEvent) -> Result<()> {
+        let (client, _) = self
+            .find_client(|client| client.window == ev.window)
+            .ok_or("configure_notify: configure on non client window, ignoring")?;
+        self.conn
+            .configure_window(
+                client.frame,
+                &xproto::ConfigureWindowAux::new()
+                    .x(ev.x as i32)
+                    .y(ev.y as i32)
+                    .width(ev.width as u32)
+                    .height((ev.height + 15) as u32),
+            )?
+            .check()?;
+        self.conn
+            .configure_window(
+                client.window,
+                &xproto::ConfigureWindowAux::new()
+                    .x(0)
+                    .y(15)
+                    .width(ev.width as u32)
+                    .height(ev.height as u32),
+            )?
+            .check()?;
         Ok(())
     }
 }
