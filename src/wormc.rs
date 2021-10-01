@@ -11,14 +11,14 @@ fn main() -> Result<()> {
 
     let (conn, scrno) = x11rb::connect(None)?;
     let atoms = ipc::get_ipc_atoms(&conn)?;
-    let root = &conn.setup().roots[scrno].root;
+    let root = conn.setup().roots[scrno].root;
     conn.send_event(
         false,
-        *root,
+        root,
         xproto::EventMask::SUBSTRUCTURE_NOTIFY,
         xproto::ClientMessageEvent::new(
             32,
-            *root,
+            root,
             atoms[ipc::IPC::ClientMessage as usize],
             match args[1].as_ref() {
                 "kill-active-client" => [ipc::IPC::KillActiveClient as u32, 0, 0, 0, 0],
