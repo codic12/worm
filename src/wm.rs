@@ -641,7 +641,6 @@ where
                                     .background_pixel(self.config.background_pixel),
                             )?
                             .check()?;
-                            self.conn.flush()?;
                     }
                 }
                 data if data[0] == ipc::IPC::TitleHeight as u32 => {
