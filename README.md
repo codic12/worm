@@ -13,6 +13,8 @@ $ cargo build --release
 ```
 In the target/release directory you should find two binaries, `worm` and `wormc`. Put them somewhere in your path, and then launch as usual - whether with a display manager or via startx (~/.xinitrc).
 
+Or, if you're running an Arch based system, check out the AUR package [worm-git](https://aur.archlinux.org/packages/worm-git/), kindly maintained by `moson`.
+
 ## Screenshot
 ![](screenshot.png)
 
