@@ -610,6 +610,16 @@ where
                     self.tags.switch_tag((data[1] - 1) as usize);
                     self.update_tag_state()?;
                 }
+                data if data[0] == ipc::IPC::BorderPixel as u32 => {
+                    self.config.border_pixel = data[1];
+                    for client in self.clients.iter() {
+                        self.conn.change_window_attributes(
+                            client.frame,
+                            &xproto::ChangeWindowAttributesAux::new()
+                                .border_pixel(self.config.border_pixel),
+                        )?.check()?;
+                    }
+                }
                 _ => {}
             }
         }

@@ -10,8 +10,11 @@ pub enum IPC {
     ClientMessage,
     KillActiveClient,
     SwitchTag,
+    BorderPixel,
     Last,
 }
+
+// Lots of these atoms we don't use, like the IPC ones. Instead, we use the offset in the IPC enum. Need to figure out better way to manage this.
 
 pub fn get_ipc_atoms<C>(conn: &C) -> Result<[xproto::Atom; IPC::Last as usize]>
 where
@@ -27,5 +30,6 @@ where
             .reply()?
             .atom,
         conn.intern_atom(false, b"_WORM_SWITCH_TAG")?.reply()?.atom,
+        conn.intern_atom(false, b"_WORM_BORDER_PIXEL")?.reply()?.atom
     ])
 }
