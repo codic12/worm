@@ -8,6 +8,7 @@ default-run = "worm"
 
 [dependencies]
 x11rb = { version = "*", features = ["xinerama"] }
+dirs = "*"
 
 [profile.release]
 lto = true

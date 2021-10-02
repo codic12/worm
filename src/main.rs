@@ -5,6 +5,11 @@ pub mod ipc;
 pub mod wm;
 
 fn main() {
+    let mut config_dir = dirs::config_dir().unwrap();
+    config_dir.push("worm");
+    let mut autostart = config_dir.clone();
+    autostart.push("autostart");
+    std::process::Command::new(autostart).spawn().unwrap();
     let (conn, scrno) = x11rb::connect(None).unwrap();
     let mut manager = match wm::WindowManager::new(&conn, scrno) {
         Ok(manager) => manager,
