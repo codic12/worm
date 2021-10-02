@@ -631,6 +631,18 @@ where
                         )?.check()?;
                     }
                 }
+                data if data[0] == ipc::IPC::BackgroundPixel as u32 => {
+                    self.config.background_pixel = data[1];
+                    for client in self.clients.iter() {
+                        self.conn
+                            .change_window_attributes(
+                                client.frame,
+                                &xproto::ChangeWindowAttributesAux::new()
+                                    .background_pixel(self.config.background_pixel),
+                            )?
+                            .check()?;
+                    }
+                }
                 _ => {}
             }
         }
