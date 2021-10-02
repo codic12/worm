@@ -26,6 +26,7 @@ fn main() -> Result<()> {
                 "border-pixel" => [ipc::IPC::BorderPixel as u32, args[2].parse::<u32>()?, 0, 0, 0],
                 "border-width" => [ipc::IPC::BorderWidth as u32, args[2].parse::<u32>()?, 0, 0, 0],
                 "background-pixel" => [ipc::IPC::BackgroundPixel as u32, args[2].parse::<u32>()?, 0, 0, 0],
+                "title-height" => [ipc::IPC::TitleHeight as u32, args[2].parse::<u32>()?, 0, 0, 0],
                 _ => unreachable!(),
             },
         ),

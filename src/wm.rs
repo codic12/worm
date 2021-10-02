@@ -641,6 +641,23 @@ where
                                     .background_pixel(self.config.background_pixel),
                             )?
                             .check()?;
+                            self.conn.flush()?;
+                    }
+                }
+                data if data[0] == ipc::IPC::TitleHeight as u32 => {
+                    self.config.title_height = data[1];
+                    for client in self.clients.iter() {
+                        let geom = self.conn.get_geometry(client.window)?.reply()?;
+                        self.conn.configure_window(
+                            client.frame,
+                            &xproto::ConfigureWindowAux::new()
+                                .height(geom.height as u32 + self.config.title_height)
+                        )?.check()?;
+                        self.conn.configure_window(
+                            client.window,
+                            &xproto::ConfigureWindowAux::new()
+                                .y(self.config.title_height as i32)
+                        )?.check()?;
                     }
                 }
                 _ => {}
@@ -658,7 +675,7 @@ where
                 client.frame,
                 &xproto::ConfigureWindowAux::new()
                     .width(ev.width as u32)
-                    .height((ev.height + 15) as u32),
+                    .height(ev.height as u32 + self.config.title_height),
             )?
             .check()?;
         Ok(())
