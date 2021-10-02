@@ -11,6 +11,7 @@ pub enum IPC {
     KillActiveClient,
     SwitchTag,
     BorderPixel,
+    BorderWidth,
     Last,
 }
 
@@ -30,6 +31,7 @@ where
             .reply()?
             .atom,
         conn.intern_atom(false, b"_WORM_SWITCH_TAG")?.reply()?.atom,
-        conn.intern_atom(false, b"_WORM_BORDER_PIXEL")?.reply()?.atom
+        conn.intern_atom(false, b"_WORM_BORDER_PIXEL")?.reply()?.atom,
+        conn.intern_atom(false, b"_WORM_BORDER_WIDTH")?.reply()?.atom,
     ])
 }

@@ -36,8 +36,8 @@ struct Client {
 /// Global configuration for the window manager.
 #[derive(Clone, Debug)]
 struct Config {
-    pub border_width: u8,
-    pub title_height: u8,
+    pub border_width: u32,
+    pub title_height: u32,
     pub border_pixel: u32,
     pub background_pixel: u32,
 }
@@ -596,7 +596,6 @@ where
             }
         } else if ev.type_ == self.ipc_atoms[ipc::IPC::ClientMessage as usize] {
             let data = ev.data.as_data32();
-            println!("{:?}", data);
             match data {
                 data if data[0] == ipc::IPC::KillActiveClient as u32 => {
                     let focused = self
@@ -613,10 +612,22 @@ where
                 data if data[0] == ipc::IPC::BorderPixel as u32 => {
                     self.config.border_pixel = data[1];
                     for client in self.clients.iter() {
-                        self.conn.change_window_attributes(
+                        self.conn
+                            .change_window_attributes(
+                                client.frame,
+                                &xproto::ChangeWindowAttributesAux::new()
+                                    .border_pixel(self.config.border_pixel),
+                            )?
+                            .check()?;
+                    }
+                }
+                data if data[0] == ipc::IPC::BorderWidth as u32 => {
+                    self.config.border_width = data[1];
+                    for client in self.clients.iter() {
+                        self.conn.configure_window(
                             client.frame,
-                            &xproto::ChangeWindowAttributesAux::new()
-                                .border_pixel(self.config.border_pixel),
+                            &xproto::ConfigureWindowAux::new()
+                                .border_width(self.config.border_width),
                         )?.check()?;
                     }
                 }
