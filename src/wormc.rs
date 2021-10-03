@@ -51,6 +51,13 @@ fn main() -> Result<()> {
                     0,
                     0,
                 ],
+                "switch-active-window-tag" => [
+                    ipc::IPC::SwitchActiveWindowTag as u32,
+                    args[2].parse::<u32>()?,
+                    0,
+                    0,
+                    0,
+                ],
                 _ => unreachable!(),
             },
         ),

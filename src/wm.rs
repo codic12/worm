@@ -677,6 +677,12 @@ where
                             .check()?;
                     }
                 }
+                data if data[0] == ipc::IPC::SwitchActiveWindowTag as u32 => {
+                    let focused = &mut self.clients
+                        [self.focused.ok_or("configure_request: no active client")?];
+                    focused.tags.switch_tag((data[1] - 1) as usize);
+                    self.update_tag_state()?;
+                }
                 _ => {}
             }
         }

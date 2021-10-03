@@ -14,6 +14,7 @@ pub enum IPC {
     BorderWidth,
     BackgroundPixel,
     TitleHeight,
+    SwitchActiveWindowTag,
     Last,
 }
 
@@ -43,6 +44,9 @@ where
             .reply()?
             .atom,
         conn.intern_atom(false, b"_WORM_TITLE_HEIGHT")?
+            .reply()?
+            .atom,
+        conn.intern_atom(false, b"_WORM_SWITCH_ACTIVE_WINDOW_TAG")?
             .reply()?
             .atom,
     ])
