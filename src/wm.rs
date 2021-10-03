@@ -42,7 +42,7 @@ struct Config {
     pub background_pixel: u32,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 struct TagSet {
     pub data: [bool; 9],
 }
@@ -182,7 +182,10 @@ where
 
                 Err(_) => continue,
             };
-            let _ = self.dispatch_event(&ev); // we don't care if it fails, and we don't need to even explicitly continue. just move on! in the future I want to log something here, in case of error.
+            match self.dispatch_event(&ev) {
+                Ok(_) => {}
+                Err(e) => eprintln!("{}", e),
+            }
         }
     }
 
@@ -492,6 +495,19 @@ where
         // We get an UnmapNotify when a window unmaps itself from the screen (we can't redirect
         // this to requests, only listen to notify events). In this case, we should also unmap it's
         // parent window, the frame, and remove it from the list of clients.
+        let mut taglen = 0usize;
+        for client in self.clients.iter() {
+            if client.tags == self.tags {
+                taglen += 1;
+            }
+        }
+        if taglen == 0 {
+            let screen = &self.conn.setup().roots[self.scrno];
+            self.conn
+                .set_input_focus(xproto::InputFocus::POINTER_ROOT, screen.root, CURRENT_TIME)?
+                .check()?;
+            return Ok(());
+        }
         let (client, client_idx) = self
             .find_client(|client| client.window == ev.window)
             .ok_or("unmap_notify: unmap on non client window, ignoring")?;
@@ -501,6 +517,7 @@ where
     }
 
     fn handle_destroy_notify(&mut self, ev: &xproto::DestroyNotifyEvent) -> Result<()> {
+        println!("DestroyNotify");
         // The same idea as UnmapNotify; this is generally recieved after UnmapNotify (but not
         // always!), so it won't run. In some cases, though, e.g. when applications are
         // force-killed and the process doesn't have a chance to clean up, we get a DestroyNotify
