@@ -495,19 +495,10 @@ where
         // We get an UnmapNotify when a window unmaps itself from the screen (we can't redirect
         // this to requests, only listen to notify events). In this case, we should also unmap it's
         // parent window, the frame, and remove it from the list of clients.
-        let mut taglen = 0usize;
-        for client in self.clients.iter() {
-            if client.tags == self.tags {
-                taglen += 1;
-            }
-        }
-        if taglen == 0 {
-            let screen = &self.conn.setup().roots[self.scrno];
-            self.conn
-                .set_input_focus(xproto::InputFocus::POINTER_ROOT, screen.root, CURRENT_TIME)?
-                .check()?;
-            return Ok(());
-        }
+        let screen = &self.conn.setup().roots[self.scrno];
+        self.conn
+            .set_input_focus(xproto::InputFocus::POINTER_ROOT, screen.root, CURRENT_TIME)?
+            .check()?;
         let (client, client_idx) = self
             .find_client(|client| client.window == ev.window)
             .ok_or("unmap_notify: unmap on non client window, ignoring")?;
@@ -528,19 +519,10 @@ where
         // always!), so it won't run. In some cases, though, e.g. when applications are
         // force-killed and the process doesn't have a chance to clean up, we get a DestroyNotify
         // without an UnmapNotify. That's where this comes into play.
-        let mut taglen = 0usize;
-        for client in self.clients.iter() {
-            if client.tags == self.tags {
-                taglen += 1;
-            }
-        }
-        if taglen == 0 {
-            let screen = &self.conn.setup().roots[self.scrno];
-            self.conn
-                .set_input_focus(xproto::InputFocus::POINTER_ROOT, screen.root, CURRENT_TIME)?
-                .check()?;
-            return Ok(());
-        }
+        let screen = &self.conn.setup().roots[self.scrno];
+        self.conn
+            .set_input_focus(xproto::InputFocus::POINTER_ROOT, screen.root, CURRENT_TIME)?
+            .check()?;
         let (client, client_idx) = self
             .find_client(|client| client.window == ev.window)
             .ok_or("destroy_notify: destroy on non client window, ignoring")?;
