@@ -7,6 +7,13 @@ A floating window manager, like the \*box family of window managers as well as W
 
 Tags are a unique concept borrowed from window managers like DWM and Awesome. Instead of workspaces having windows, windows have tags. This is a very unique concept. You can view 3 separate tags at a time, or have a window on 3 separate tags. Right now only the use case of being used like workspaces is supported, but internally the foundation for tags is there; just needs to be exposed to the user with IPC support.
 
+## Get (git) the code - a refresher if needed
+
+Depending on where you store your source code, most other git cloned projects may be in /opt.
+```
+$ cd /opt
+$ git clone https://github.com/codic12/worm
+```
 ## Install
 ```
 $ cargo build --release
