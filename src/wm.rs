@@ -155,6 +155,22 @@ where
             &net_atoms,
         )?
         .check()?;
+        conn.change_property32(
+            xproto::PropMode::REPLACE,
+            screen.root,
+            net_atoms[ewmh::Net::NumberOfDesktops as usize],
+            xproto::AtomEnum::CARDINAL,
+            &[9],
+        )?
+        .check()?;
+        conn.change_property32(
+            xproto::PropMode::REPLACE,
+            screen.root,
+            net_atoms[ewmh::Net::CurrentDesktop as usize],
+            xproto::AtomEnum::CARDINAL,
+            &[0],
+        )?
+        .check()?;
         Ok(Self {
             conn,
             scrno,
@@ -643,7 +659,17 @@ where
                         .check()?;
                 }
                 data if data[0] == ipc::IPC::SwitchTag as u32 => {
+                    let screen = &self.conn.setup().roots[self.scrno];
                     self.tags.switch_tag((data[1] - 1) as usize);
+                    self.conn
+                        .change_property32(
+                            xproto::PropMode::REPLACE,
+                            screen.root,
+                            self.net_atoms[ewmh::Net::CurrentDesktop as usize],
+                            xproto::AtomEnum::CARDINAL,
+                            &[data[1] - 1],
+                        )?
+                        .check()?;
                     self.update_tag_state()?;
                 }
                 data if data[0] == ipc::IPC::BorderPixel as u32 => {
