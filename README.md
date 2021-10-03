@@ -11,7 +11,6 @@ Tags are a unique concept borrowed from window managers like DWM and Awesome. In
 
 Depending on where you store your source code, most other git cloned projects may be in /opt.
 ```
-$ cd /opt
 $ git clone https://github.com/codic12/worm
 ```
 ## Install
