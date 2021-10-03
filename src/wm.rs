@@ -81,7 +81,7 @@ where
     conn: &'a C,
     scrno: usize,
     button_press_geometry: Option<Geometry>,
-    mouse_move_start: Option <MouseMoveStart>,
+    mouse_move_start: Option<MouseMoveStart>,
     clients: Vec<Client>,
     net_atoms: [xproto::Atom; ewmh::Net::Last as usize],
     ipc_atoms: [xproto::Atom; ipc::IPC::Last as usize],
@@ -465,12 +465,24 @@ where
     fn handle_configure_request(&self, ev: &xproto::ConfigureRequestEvent) -> Result<()> {
         // A window wants us to configure it.
         // Sure, let's configure it.
+        //
+        let client = self.find_client(|client| client.window == ev.window);
+        if client.is_none() {
+            self.conn
+                .configure_window(
+                    ev.window,
+                    &xproto::ConfigureWindowAux::from_configure_request(ev),
+                )?
+                .check()?;
+            return Ok(());
+        }
+        let client = client.unwrap().0;
         self.conn
             .configure_window(
-                ev.window,
+                client.window,
                 &xproto::ConfigureWindowAux::from_configure_request(ev)
-                    .sibling(None)
-                    .stack_mode(None),
+                    .x(0)
+                    .y(15),
             )?
             .check()?;
         Ok(())
@@ -624,11 +636,13 @@ where
                 data if data[0] == ipc::IPC::BorderWidth as u32 => {
                     self.config.border_width = data[1];
                     for client in self.clients.iter() {
-                        self.conn.configure_window(
-                            client.frame,
-                            &xproto::ConfigureWindowAux::new()
-                                .border_width(self.config.border_width),
-                        )?.check()?;
+                        self.conn
+                            .configure_window(
+                                client.frame,
+                                &xproto::ConfigureWindowAux::new()
+                                    .border_width(self.config.border_width),
+                            )?
+                            .check()?;
                     }
                 }
                 data if data[0] == ipc::IPC::BackgroundPixel as u32 => {
@@ -647,16 +661,20 @@ where
                     self.config.title_height = data[1];
                     for client in self.clients.iter() {
                         let geom = self.conn.get_geometry(client.window)?.reply()?;
-                        self.conn.configure_window(
-                            client.frame,
-                            &xproto::ConfigureWindowAux::new()
-                                .height(geom.height as u32 + self.config.title_height)
-                        )?.check()?;
-                        self.conn.configure_window(
-                            client.window,
-                            &xproto::ConfigureWindowAux::new()
-                                .y(self.config.title_height as i32)
-                        )?.check()?;
+                        self.conn
+                            .configure_window(
+                                client.frame,
+                                &xproto::ConfigureWindowAux::new()
+                                    .height(geom.height as u32 + self.config.title_height),
+                            )?
+                            .check()?;
+                        self.conn
+                            .configure_window(
+                                client.window,
+                                &xproto::ConfigureWindowAux::new()
+                                    .y(self.config.title_height as i32),
+                            )?
+                            .check()?;
                     }
                 }
                 _ => {}
@@ -666,7 +684,7 @@ where
     }
 
     fn handle_configure_notify(&self, ev: &xproto::ConfigureNotifyEvent) -> Result<()> {
-        let (client, client_idx) = self
+        let (client, _) = self
             .find_client(|client| client.window == ev.window)
             .ok_or("configure_notify: configure on non client window, ignoring")?;
         self.conn

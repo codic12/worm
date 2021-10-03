@@ -33,9 +33,17 @@ where
             .reply()?
             .atom,
         conn.intern_atom(false, b"_WORM_SWITCH_TAG")?.reply()?.atom,
-        conn.intern_atom(false, b"_WORM_BORDER_PIXEL")?.reply()?.atom,
-        conn.intern_atom(false, b"_WORM_BORDER_WIDTH")?.reply()?.atom,
-        conn.intern_atom(false, b"_WORM_BACKGROUND_PIXEL")?.reply()?.atom,
-        conn.intern_atom(false, b"_WORM_TITLE_HEIGHT")?.reply()?.atom
+        conn.intern_atom(false, b"_WORM_BORDER_PIXEL")?
+            .reply()?
+            .atom,
+        conn.intern_atom(false, b"_WORM_BORDER_WIDTH")?
+            .reply()?
+            .atom,
+        conn.intern_atom(false, b"_WORM_BACKGROUND_PIXEL")?
+            .reply()?
+            .atom,
+        conn.intern_atom(false, b"_WORM_TITLE_HEIGHT")?
+            .reply()?
+            .atom,
     ])
 }
