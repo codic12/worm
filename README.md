@@ -9,7 +9,7 @@ Tags are a unique concept borrowed from window managers like DWM and Awesome. In
 
 ## Get (git) the code - a refresher if needed
 
-Depending on where you store your source code, most other git cloned projects may be in /opt.
+Depending on where you store your source code, go to the parent folder of your other git projects (if any), or where you want this code repo to be.
 ```
 $ git clone https://github.com/codic12/worm
 ```
