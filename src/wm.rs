@@ -81,7 +81,7 @@ where
     conn: &'a C,
     scrno: usize,
     button_press_geometry: Option<Geometry>,
-    mouse_move_start: Option<MouseMoveStart>,
+    mouse_move_start: Option <MouseMoveStart>,
     clients: Vec<Client>,
     net_atoms: [xproto::Atom; ewmh::Net::Last as usize],
     ipc_atoms: [xproto::Atom; ipc::IPC::Last as usize],

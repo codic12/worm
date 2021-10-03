@@ -28,4 +28,4 @@ Or, if you're running an Arch based system, check out the AUR package [worm-git]
 Use it! Spread the word! Report issues! Submit pull requests!
 
 ## License
-Worm is distibuted/licensed under the [MIT License](LICENSE), you may obtain a copy of the MIT license [here](https://mit-license.org/).
+Worm is distributed under the [MIT License](LICENSE); you may obtain a copy [here](https://mit-license.org/).
