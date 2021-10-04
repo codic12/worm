@@ -183,7 +183,7 @@ where
                 border_width: 3,
                 title_height: 15,
                 border_pixel: 0x547A97,
-                background_pixel: 0x1A1311,
+                background_pixel: 0x291E1B,
             },
             tags: TagSet::default(),
             focused: None,
