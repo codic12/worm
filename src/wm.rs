@@ -351,6 +351,23 @@ where
             frame_win,
             &xproto::ConfigureWindowAux::new().stack_mode(xproto::StackMode::ABOVE),
         )?;
+        let mut tag_idx: Option<usize> = None;
+        for (idx, tag) in self.tags.data.iter().enumerate() {
+            if *tag {
+                tag_idx = Some(idx);
+                break;
+            }
+        }
+        let tag_idx = tag_idx.ok_or("map_request: not on any tag")?;
+        self.conn
+            .change_property32(
+                xproto::PropMode::REPLACE,
+                ev.window,
+                self.net_atoms[ewmh::Net::WMDesktop as usize],
+                xproto::AtomEnum::CARDINAL,
+                &[tag_idx as u32],
+            )?
+            .check()?;
         Ok(())
     }
 
