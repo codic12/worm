@@ -96,7 +96,7 @@ where
 {
     pub fn new(conn: &'a C, scrno: usize) -> Result<Self> {
         let screen = &conn.setup().roots[scrno];
-        for button in &[xproto::ButtonIndex::M1, xproto::ButtonIndex::M3] {
+        for button in [xproto::ButtonIndex::M1, xproto::ButtonIndex::M3] {
             match conn
                 .grab_button(
                     false,
@@ -110,14 +110,14 @@ where
                     xproto::GrabMode::ASYNC,
                     screen.root,
                     NONE,
-                    *button,
+                    button,
                     xproto::KeyButMask::MOD4,
                 )?
                 .check()
             {
                 Ok(()) => {}
                 Err(_) => {
-                    eprintln!("warn: error grabbing mouse button {:?}. moving/resizing may not function as expected", *button)
+                    eprintln!("warn: error grabbing mouse button {:?}. moving/resizing may not function as expected", button)
                 }
             }
         }
@@ -513,6 +513,22 @@ where
             return Ok(());
         }
         let client = client.unwrap().0;
+        if client.fullscreen {
+            let ss = xinerama::get_screen_size(self.conn, client.window, 0)?.reply()?; // get the screen size
+            for win in [client.frame, client.window] {
+                self.conn
+                    .configure_window(
+                        win,
+                        &xproto::ConfigureWindowAux::new()
+                            .x(0)
+                            .y(0)
+                            .width(ss.width)
+                            .height(ss.height),
+                    )?
+                    .check()?;
+                return Err(Box::from("configure_notify: sent by fullscreen client"));
+            }
+        }
         self.conn
             .configure_window(
                 client.window,
@@ -761,6 +777,22 @@ where
         let (client, _) = self
             .find_client(|client| client.window == ev.window)
             .ok_or("configure_notify: configure on non client window, ignoring")?;
+        if client.fullscreen {
+            let ss = xinerama::get_screen_size(self.conn, client.window, 0)?.reply()?; // get the screen size
+            for win in [client.frame, client.window] {
+                self.conn
+                    .configure_window(
+                        win,
+                        &xproto::ConfigureWindowAux::new()
+                            .x(0)
+                            .y(0)
+                            .width(ss.width)
+                            .height(ss.height),
+                    )?
+                    .check()?;
+                return Err(Box::from("configure_notify: sent by fullscreen client"));
+            }
+        }
         self.conn
             .configure_window(
                 client.frame,
