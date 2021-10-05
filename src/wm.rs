@@ -127,6 +127,7 @@ where
                 &xproto::ChangeWindowAttributesAux::new().event_mask(
                     xproto::EventMask::SUBSTRUCTURE_REDIRECT
                         | xproto::EventMask::SUBSTRUCTURE_NOTIFY
+                        | xproto::EventMask::EXPOSURE
                         | xproto::EventMask::STRUCTURE_NOTIFY,
                 ),
             )?
