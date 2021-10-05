@@ -126,7 +126,8 @@ where
                 screen.root,
                 &xproto::ChangeWindowAttributesAux::new().event_mask(
                     xproto::EventMask::SUBSTRUCTURE_REDIRECT
-                        | xproto::EventMask::SUBSTRUCTURE_NOTIFY,
+                        | xproto::EventMask::SUBSTRUCTURE_NOTIFY
+                        | xproto::EventMask::STRUCTURE_NOTIFY,
                 ),
             )?
             .check()
@@ -344,6 +345,9 @@ where
             tags: self.tags.clone(), // this window has whatever tags user is currently on; we want to clone it instead of storing a reference, because the client's tags are independent, this is just a starting point
         });
         self.focused = Some(self.clients.len() - 1);
+        for client in self.clients.iter() {
+            println!("Client: {:?}", client);
+        }
         self.conn
             .set_input_focus(xproto::InputFocus::PARENT, ev.window, CURRENT_TIME)?
             .check()?;
@@ -553,13 +557,7 @@ where
             .ok_or("unmap_notify: unmap on non client window, ignoring")?;
         self.conn.unmap_window(client.frame)?.check()?;
         self.clients.remove(client_idx);
-        if self
-            .focused
-            .ok_or("unmap_notify: failed to get self.focused")?
-            == client_idx
-        {
-            self.focused = None;
-        }
+        self.focused = None;
         Ok(())
     }
 
@@ -577,13 +575,7 @@ where
             .ok_or("destroy_notify: destroy on non client window, ignoring")?;
         self.conn.destroy_window(client.frame)?.check()?;
         self.clients.remove(client_idx);
-        if self
-            .focused
-            .ok_or("unmap_notify: failed to get self.focused")?
-            == client_idx
-        {
-            self.focused = None;
-        }
+        self.focused = None;
         Ok(())
     }
 
@@ -687,6 +679,10 @@ where
                     let focused = self
                         .focused
                         .ok_or("client_message: no focused window to kill")?; // todo: get-input_focus
+                    if focused > (self.clients.len() - 1) {
+                        self.focused = None;
+                        return Ok(()); // It looks like we hit a race condition... some very fast bad user, or more likely a crappy slow X11 server
+                    }
                     self.conn
                         .kill_client(self.clients[focused].window)?
                         .check()?;
