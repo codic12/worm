@@ -346,9 +346,6 @@ where
             tags: self.tags.clone(), // this window has whatever tags user is currently on; we want to clone it instead of storing a reference, because the client's tags are independent, this is just a starting point
         });
         self.focused = Some(self.clients.len() - 1);
-        for client in self.clients.iter() {
-            println!("Client: {:?}", client);
-        }
         self.conn
             .set_input_focus(xproto::InputFocus::PARENT, ev.window, CURRENT_TIME)?
             .check()?;
