@@ -128,7 +128,8 @@ where
                     xproto::EventMask::SUBSTRUCTURE_REDIRECT
                         | xproto::EventMask::SUBSTRUCTURE_NOTIFY
                         | xproto::EventMask::EXPOSURE
-                        | xproto::EventMask::STRUCTURE_NOTIFY,
+                        | xproto::EventMask::STRUCTURE_NOTIFY
+                        | xproto::EventMask::PROPERTY_CHANGE,
                 ),
             )?
             .check()
@@ -200,10 +201,7 @@ where
 
                 Err(_) => continue,
             };
-            match self.dispatch_event(&ev) {
-                Ok(_) => {}
-                Err(e) => eprintln!("{}", e),
-            }
+            let _ = self.dispatch_event(&ev);
         }
     }
 
@@ -254,6 +252,7 @@ where
             protocol::Event::DestroyNotify(ev) => self.handle_destroy_notify(ev)?,
             protocol::Event::ClientMessage(ev) => self.handle_client_message(ev)?,
             protocol::Event::ConfigureNotify(ev) => self.handle_configure_notify(ev)?,
+            protocol::Event::PropertyNotify(ev) => self.handle_property_notify(ev)?,
             _ => {}
         }
         Ok(())
@@ -311,7 +310,8 @@ where
                     | xproto::EventMask::BUTTON_PRESS
                     | xproto::EventMask::BUTTON_RELEASE
                     | xproto::EventMask::POINTER_MOTION
-                    | xproto::EventMask::ENTER_WINDOW,
+                    | xproto::EventMask::ENTER_WINDOW
+                    | xproto::EventMask::PROPERTY_CHANGE,
             )
             .background_pixel(self.config.background_pixel)
             .border_pixel(self.config.border_pixel);
@@ -371,6 +371,13 @@ where
                 self.net_atoms[ewmh::Net::WMDesktop as usize],
                 xproto::AtomEnum::CARDINAL,
                 &[tag_idx as u32],
+            )?
+            .check()?;
+        self.conn
+            .change_window_attributes(
+                ev.window,
+                &xproto::ChangeWindowAttributesAux::new()
+                    .event_mask(xproto::EventMask::PROPERTY_CHANGE),
             )?
             .check()?;
         Ok(())
@@ -798,6 +805,10 @@ where
                     .height(ev.height as u32 + self.config.title_height),
             )?
             .check()?;
+        Ok(())
+    }
+
+    fn handle_property_notify(&self, ev: &xproto::PropertyNotifyEvent) -> Result<()> {
         Ok(())
     }
 }
