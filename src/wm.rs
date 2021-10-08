@@ -548,17 +548,17 @@ where
     fn handle_unmap_notify(&mut self, ev: &xproto::UnmapNotifyEvent) -> Result<()> {
         // We get an UnmapNotify when a window unmaps itself from the screen (we can't redirect
         // this to requests, only listen to notify events). In this case, we should also unmap it's
-        // parent window, the frame, and remove it from the list of clients.
-        let screen = &self.conn.setup().roots[self.scrno];
-        self.conn
-            .set_input_focus(xproto::InputFocus::POINTER_ROOT, screen.root, CURRENT_TIME)?
-            .check()?;
+        // parent window, the frame, and remove it from the list of clients
         let (client, client_idx) = self
             .find_client(|client| client.window == ev.window)
             .ok_or("unmap_notify: unmap on non client window, ignoring")?;
         self.conn.unmap_window(client.frame)?.check()?;
         self.clients.remove(client_idx);
         self.focused = None;
+        let screen = &self.conn.setup().roots[self.scrno];
+        self.conn
+            .set_input_focus(xproto::InputFocus::POINTER_ROOT, screen.root, CURRENT_TIME)?
+            .check()?;
         Ok(())
     }
 
@@ -567,16 +567,16 @@ where
         // always!), so it won't run. In some cases, though, e.g. when applications are
         // force-killed and the process doesn't have a chance to clean up, we get a DestroyNotify
         // without an UnmapNotify. That's where this comes into play.
-        let screen = &self.conn.setup().roots[self.scrno];
-        self.conn
-            .set_input_focus(xproto::InputFocus::POINTER_ROOT, screen.root, CURRENT_TIME)?
-            .check()?;
         let (client, client_idx) = self
             .find_client(|client| client.window == ev.window)
             .ok_or("destroy_notify: destroy on non client window, ignoring")?;
         self.conn.destroy_window(client.frame)?.check()?;
         self.clients.remove(client_idx);
         self.focused = None;
+        let screen = &self.conn.setup().roots[self.scrno];
+        self.conn
+            .set_input_focus(xproto::InputFocus::POINTER_ROOT, screen.root, CURRENT_TIME)?
+            .check()?;
         Ok(())
     }
 
