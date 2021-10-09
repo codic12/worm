@@ -301,6 +301,7 @@ where
             .check()?;
         let screen = &self.conn.setup().roots[self.scrno];
         let geom = self.conn.get_geometry(ev.window)?.reply()?;
+        let attr = self.conn.get_window_attributes(ev.window)?.reply()?;
         let frame_win = self.conn.generate_id()?;
         let win_aux = xproto::CreateWindowAux::new()
             .event_mask(
@@ -314,9 +315,10 @@ where
                     | xproto::EventMask::PROPERTY_CHANGE,
             )
             .background_pixel(self.config.background_pixel)
-            .border_pixel(self.config.border_pixel);
+            .border_pixel(self.config.border_pixel)
+            .colormap(attr.colormap);
         self.conn.create_window(
-            COPY_DEPTH_FROM_PARENT,
+            geom.depth,
             frame_win,
             screen.root,
             geom.x,
@@ -325,7 +327,7 @@ where
             geom.height + self.config.title_height as u16,
             self.config.border_width as u16,
             xproto::WindowClass::INPUT_OUTPUT,
-            0,
+            attr.visual,
             &win_aux,
         )?;
         self.conn.grab_server()?.check()?;
