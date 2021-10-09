@@ -323,7 +323,7 @@ where
             geom.y,
             geom.width,
             geom.height + self.config.title_height as u16,
-            3,
+            self.config.border_width as u16,
             xproto::WindowClass::INPUT_OUTPUT,
             0,
             &win_aux,
