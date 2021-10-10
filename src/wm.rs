@@ -185,8 +185,9 @@ where
             config: Config {
                 border_width: 3,
                 title_height: 15,
-                border_pixel: 0xC3A070,
-                background_pixel: 0x291E1B,
+                border_pixel: 0xFFC3A070,
+                background_pixel: 0xFF291E1B,
+                //background_pixel: 0xFFFFFFFF,
             },
             tags: TagSet::default(),
             focused: None,

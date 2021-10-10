@@ -33,6 +33,7 @@ pub enum Net {
     WMWindowTypeTooltip,
     WMWindowTypeNotification,
     WMWindowTypeDock,
+    WMWindowOpacity,
     WMDesktop,
     DesktopViewport,
     NumberOfDesktops,
@@ -123,6 +124,9 @@ where
             .reply()?
             .atom,
         conn.intern_atom(false, b"_NET_WM_WINDOW_TYPE_DOCK")?
+            .reply()?
+            .atom,
+        conn.intern_atom(false, b"_NET_WM_WINDOW_OPACITY")?
             .reply()?
             .atom,
         conn.intern_atom(false, b"_NET_WM_DESKTOP")?.reply()?.atom,
