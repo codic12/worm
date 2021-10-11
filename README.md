@@ -7,22 +7,43 @@ A floating window manager, like the \*box family of window managers as well as W
 
 Tags are a unique concept borrowed from window managers like DWM and Awesome. Instead of workspaces having windows, windows have tags. This is a very unique concept. You can view 3 separate tags at a time, or have a window on 3 separate tags. Right now only the use case of being used like workspaces is supported, but internally the foundation for tags is there; just needs to be exposed to the user with IPC support.
 
-## Get (git) the code - a refresher if needed
-
-Depending on where you store your source code, go to the parent folder of your other git projects (if any), or where you want this code repo to be.
+## Building
+Building requires cargo/rust to be installed on your system.
+Simply clone this git repository and build with cargo:
 ```
 $ git clone https://github.com/codic12/worm
-```
-## Install
-```
+$ cd worm
 $ cargo build --release
 ```
-In the target/release directory you should find two binaries, `worm` and `wormc`. Put them somewhere in your path, and then launch as usual - whether with a display manager or via startx (~/.xinitrc).
 
-Or, if you're running an Arch based system, check out the AUR package [worm-git](https://aur.archlinux.org/packages/worm-git/), kindly maintained by `moson`.
+You'll find the binaries in the `target/release` directory.
+
+## Installing
+After building, copy `worm` and `wormc` to a directory listed in the PATH variable.
+(typically you'd put it into `/usr/local/bin`)
+
+```
+$ sudo cp target/release/{worm,wormc} /usr/local/bin/
+```
+
+For those of you using a display manager, you can copy the `worm.desktop` file located in `assets` to your xsessions directoy.
+
+```
+$ sudo cp assets/worm.desktop /usr/share/xsessions/
+```
+
+If you're running an Arch-based distribution, you can use the [worm-git](https://aur.archlinux.org/packages/worm-git/) AUR package to build and install worm.
+
+
+## Autostart / configuration
+Worm will try to execute the file `~/.config/worm/autostart` on startup.  
+Simply create it as a shell-script to execute your favorite applications with worm.  
+(don't forget to make it executable)
+
+An example can be found [here](examples/autostart)
 
 ## Screenshot
-![](screenshot.png)
+![](assets/screenshot.png)
 
 ## Contribute
 Use it! Spread the word! Report issues! Submit pull requests!
