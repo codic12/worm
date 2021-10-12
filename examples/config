@@ -9,11 +9,8 @@
 # Start polybar
 polybar mybar &
 
-# Start firefox browser
-firefox &
-
 # Start terminal
-xfce4-terminal
+alacritty &
 
 ## worm settings
 # Set border width to 1 px
