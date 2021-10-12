@@ -9,4 +9,6 @@ install:
 	sudo mv target/release/{worm,wormc} /usr/local/bin
 	sudo cp assets/worm.desktop /usr/share/xsessions
 	mkdir -p ~/.config/worm
-	touch ~/.config/worm/config
+	echo "#!/bin/sh" >> ~/.config/worm/config
+	chmod +x ~/.config/worm/config
+
