@@ -250,7 +250,7 @@ where
             protocol::Event::MotionNotify(ev) => self.handle_motion_notify(ev)?,
             protocol::Event::ConfigureRequest(ev) => self.handle_configure_request(ev)?,
             protocol::Event::UnmapNotify(ev) => self.handle_unmap_notify(ev)?,
-            protocol::Event::DestroyNotify(ev) => self.handle_destroy_notify(ev)?,
+            protocol::Event::DestroyNotify(ev) => self.handle_stroy_notify(ev)?,
             protocol::Event::ClientMessage(ev) => self.handle_client_message(ev)?,
             protocol::Event::ConfigureNotify(ev) => self.handle_configure_notify(ev)?,
             protocol::Event::PropertyNotify(ev) => self.handle_property_notify(ev)?,

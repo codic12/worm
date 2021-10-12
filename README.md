@@ -42,8 +42,8 @@ Simply create it as a shell-script to execute your favorite applications with wo
 
 An example can be found [here](examples/autostart)
 
-## Screenshot
-![](assets/screenshot.png)
+## Screenshots
+Check the wiki page.
 
 ## Contribute
 Use it! Spread the word! Report issues! Submit pull requests!
