@@ -1,18 +1,40 @@
-extern crate x11rb;
+use crate::args::Args;
+use anyhow::{bail, Context, Result};
+use clap::Clap;
 
-pub mod ewmh;
-pub mod ipc;
-pub mod wm;
+mod args;
+mod ewmh;
+mod ipc;
+mod wm;
 
-fn main() {
-    let mut config_dir = dirs::config_dir().unwrap();
-    config_dir.push("worm");
-    let mut autostart = config_dir.clone();
-    autostart.push("autostart");
-    match std::process::Command::new(autostart).spawn() {
-        Ok(_) => {}
-        Err(_) => eprintln!("warn: failed to run autostart"),
+pub const NAME: &'static str = "worm";
+pub const CONFIG_FILE: &'static str = "config";
+
+fn exec_config(args: &mut Args) -> Result<()> {
+    let config = args.config.get_or_insert_with(|| {
+        let mut config_dir = dirs::config_dir().unwrap();
+        config_dir.push(NAME);
+        let mut config = config_dir.clone();
+        config.push(CONFIG_FILE);
+        config
+    });
+
+    if !config.exists() {
+        bail!("config file does not exist");
     }
+
+    std::process::Command::new(config)
+        .spawn()
+        .with_context(|| "warn: failed to run config file")?;
+
+    Ok(())
+}
+
+fn main() -> Result<()> {
+    let mut args = Args::parse();
+    // exec auto start script
+    exec_config(&mut args)?;
+    // get auto_start file location
     let (conn, scrno) = x11rb::connect(None).unwrap();
     let mut manager = match wm::WindowManager::new(&conn, scrno) {
         Ok(manager) => manager,
@@ -22,4 +44,5 @@ fn main() {
         }
     };
     manager.event_loop();
+    Ok(())
 }
