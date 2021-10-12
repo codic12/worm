@@ -1,5 +1,5 @@
-extern crate x11rb;
 use crate::{ewmh, ipc};
+use anyhow::{bail, Context, Result};
 use protocol::{
     xinerama,
     xproto::{self, ConnectionExt},
@@ -72,8 +72,6 @@ impl TagSet {
     }
 }
 
-type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
-
 pub struct WindowManager<'a, C>
 where
     C: connection::Connection,
@@ -121,7 +119,7 @@ where
                 }
             }
         }
-        match conn
+        conn
             .change_window_attributes(
                 screen.root,
                 &xproto::ChangeWindowAttributesAux::new().event_mask(
@@ -132,16 +130,15 @@ where
                         | xproto::EventMask::PROPERTY_CHANGE,
                 ),
             )?
-            .check()
-        {
-            Ok(()) => {}
-            Err(_) => {
-                return Err(Box::from(
+            .check().context(
                     "a window manager is already running on this display (failed to capture SubstructureRedirect|SubstructureNotify on root window)",
-                ))
-            }
-        }
-        let net_atoms = ewmh::get_ewmh_atoms(conn)?;
+            )?;
+
+        let net_atoms = match ewmh::get_ewmh_atoms(conn) {
+            Ok(net_atoms) => net_atoms,
+            Err(err) => bail!("{}", err),
+        };
+
         conn.change_property32(
             xproto::PropMode::REPLACE,
             screen.root,
@@ -181,7 +178,10 @@ where
             mouse_move_start: None,
             clients: Vec::new(),
             net_atoms,
-            ipc_atoms: ipc::get_ipc_atoms(conn)?,
+            ipc_atoms: match ipc::get_ipc_atoms(conn) {
+                Ok(ipc_atoms) => ipc_atoms,
+                Err(err) => bail!("{}", err),
+            },
             config: Config {
                 border_width: 3,
                 title_height: 15,
@@ -363,7 +363,8 @@ where
                 break;
             }
         }
-        let tag_idx = tag_idx.ok_or("map_request: not on any tag")?;
+        let tag_idx = tag_idx.context("map_request: not on any tag")?;
+
         self.conn
             .change_property32(
                 xproto::PropMode::REPLACE,
@@ -386,7 +387,7 @@ where
     fn handle_button_press(&mut self, ev: &xproto::ButtonPressEvent) -> Result<()> {
         let (client, client_idx) = self
             .find_client(|client| client.frame == ev.child)
-            .ok_or("button_press: press on non client window, ignoring")?;
+            .context("button_press: press on non client window, ignoring")?;
         self.conn
             .set_input_focus(xproto::InputFocus::PARENT, client.window, CURRENT_TIME)?
             .check()?;
@@ -415,20 +416,18 @@ where
     fn handle_motion_notify(&mut self, ev: &xproto::MotionNotifyEvent) -> Result<()> {
         let (client, _) = self
             .find_client(|client| client.frame == ev.child)
-            .ok_or("motion_notify: motion on non client window, ignoring")?;
+            .context("motion_notify: motion on non client window, ignoring")?;
         if client.fullscreen {
-            return Err(Box::from(
-                "motion_notify: motion on fullscreen window, ignoring",
-            ));
+            bail!("motion_notify: motion on fullscreen window, ignoring",);
         }
         let mouse_move_start = self
             .mouse_move_start
             .as_ref()
-            .ok_or("motion_notify: failed to get value of mouse_move_start, ignoring")?;
+            .context("motion_notify: failed to get value of mouse_move_start, ignoring")?;
         let button_press_geometry = self
             .button_press_geometry
             .as_ref()
-            .ok_or("motion_notify: failed to get value of button_press_geometry, ignoring")?;
+            .context("motion_notify: failed to get value of button_press_geometry, ignoring")?;
         // Boring calculate dimensions stuff. Lots of casting. X11 sucks.
         // Max out with 1 on the subtraction operations, because subtraction can
         // yield negative numbers. (So can addition, but we're only dealing with
@@ -538,7 +537,7 @@ where
                             .height(ss.height),
                     )?
                     .check()?;
-                return Err(Box::from("configure_notify: sent by fullscreen client"));
+                bail!("configure_notify: sent by fullscreen client");
             }
         }
         self.conn
@@ -558,7 +557,7 @@ where
         // parent window, the frame, and remove it from the list of clients
         let (client, client_idx) = self
             .find_client(|client| client.window == ev.window)
-            .ok_or("unmap_notify: unmap on non client window, ignoring")?;
+            .context("unmap_notify: unmap on non client window, ignoring")?;
         self.conn.unmap_window(client.frame)?.check()?;
         self.clients.remove(client_idx);
         self.focused = None;
@@ -576,7 +575,7 @@ where
         // without an UnmapNotify. That's where this comes into play.
         let (client, client_idx) = self
             .find_client(|client| client.window == ev.window)
-            .ok_or("destroy_notify: destroy on non client window, ignoring")?;
+            .context("destroy_notify: destroy on non client window, ignoring")?;
         self.conn.destroy_window(client.frame)?.check()?;
         self.clients.remove(client_idx);
         self.focused = None;
@@ -594,11 +593,11 @@ where
             if ev.format != 32 {
                 // The spec specifies the format must be 32, this is a buggy and misbehaving
                 // application
-                return Err(Box::from("client_message: ev.format != 32, ignoring"));
+                bail!("client_message: ev.format != 32, ignoring");
             }
             let (_, client_idx) = self
                 .find_client_mut(|client| client.window == ev.window)
-                .ok_or("client_message: unmap on non client window, ignoring")?;
+                .context("client_message: unmap on non client window, ignoring")?;
             let mut client = &mut self.clients[client_idx]; // we can't use the &mut Client we get & ignore from the find_client_mut method, because then we get errors about multiple mutable borrows... ugh!
             let data = ev.data.as_data32(); // it looks like it's not a simple getter but pulls out the bits and manipulates them, so I don't want to keep fetching it; cache it into an immutable stack local
             if data[1] == self.net_atoms[ewmh::Net::WMStateFullScreen as usize]
@@ -644,7 +643,7 @@ where
                         .check()?;
                 } else {
                     client.fullscreen = false;
-                    let before_geom = client.before_geom.as_ref().ok_or(
+                    let before_geom = client.before_geom.as_ref().context(
                         "client_message: unfullscreening, but client has no before_geom field (it has not fullscreened before). ignoring.",
                     )?;
                     // Put the frame and window right back where they were
@@ -686,7 +685,7 @@ where
                 data if data[0] == ipc::IPC::KillActiveClient as u32 => {
                     let focused = self
                         .focused
-                        .ok_or("client_message: no focused window to kill")?; // todo: get-input_focus
+                        .context("client_message: no focused window to kill")?; // todo: get-input_focus
                     if focused > (self.clients.len() - 1) {
                         self.focused = None;
                         return Ok(()); // It looks like we hit a race condition... some very fast bad user, or more likely a crappy slow X11 server
@@ -766,8 +765,9 @@ where
                     }
                 }
                 data if data[0] == ipc::IPC::SwitchActiveWindowTag as u32 => {
-                    let focused = &mut self.clients
-                        [self.focused.ok_or("configure_request: no active client")?];
+                    let focused = &mut self.clients[self
+                        .focused
+                        .context("configure_request: no active client")?];
                     focused.tags.switch_tag((data[1] - 1) as usize);
                     self.update_tag_state()?;
                 }
@@ -780,7 +780,7 @@ where
     fn handle_configure_notify(&self, ev: &xproto::ConfigureNotifyEvent) -> Result<()> {
         let (client, _) = self
             .find_client(|client| client.window == ev.window)
-            .ok_or("configure_notify: configure on non client window, ignoring")?;
+            .context("configure_notify: configure on non client window, ignoring")?;
         if client.fullscreen {
             let ss = xinerama::get_screen_size(self.conn, client.window, 0)?.reply()?; // get the screen size
             for win in [client.frame, client.window] {
@@ -794,7 +794,7 @@ where
                             .height(ss.height),
                     )?
                     .check()?;
-                return Err(Box::from("configure_notify: sent by fullscreen client"));
+                bail!("configure_notify: sent by fullscreen client");
             }
         }
         self.conn

@@ -25,7 +25,7 @@ fn exec_config(args: &mut Args) -> Result<()> {
 
     std::process::Command::new(config)
         .spawn()
-        .with_context(|| "warn: failed to run config file")?;
+        .context("warn: failed to run config file")?;
 
     Ok(())
 }
@@ -36,13 +36,9 @@ fn main() -> Result<()> {
     exec_config(&mut args)?;
     // get auto_start file location
     let (conn, scrno) = x11rb::connect(None).unwrap();
-    let mut manager = match wm::WindowManager::new(&conn, scrno) {
-        Ok(manager) => manager,
-        Err(e) => {
-            eprintln!("\x1b[31mfatal error while connecting: {}\x1b[0m", e);
-            std::process::exit(1);
-        }
-    };
+
+    let mut manager = wm::WindowManager::new(&conn, scrno)
+        .context("\x1b[31mfatal error while connecting: \x1b[0m")?;
     manager.event_loop();
     Ok(())
 }
