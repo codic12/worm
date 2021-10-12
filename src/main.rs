@@ -20,7 +20,7 @@ fn exec_config(args: &mut Args) -> Result<()> {
     });
 
     if !config.exists() {
-        bail!("config file does not exist");
+        bail!("config file does not exist: {:?}", config);
     }
 
     std::process::Command::new(config)
