@@ -38,7 +38,8 @@ struct Client {
 struct Config {
     pub border_width: u32,
     pub title_height: u32,
-    pub border_pixel: u32,
+    pub active_border_pixel: u32,
+    pub inactive_border_pixel: u32,
     pub background_pixel: u32,
 }
 
@@ -193,7 +194,8 @@ where
             config: Config {
                 border_width: 3,
                 title_height: 15,
-                border_pixel: 0xFFC3A070,
+                active_border_pixel: 0xFFC3A070,
+                inactive_border_pixel: 0xFF000000,
                 background_pixel: 0xFF291E1B,
                 //background_pixel: 0xFFFFFFFF,
             },
@@ -324,7 +326,7 @@ where
                     | xproto::EventMask::PROPERTY_CHANGE,
             )
             .background_pixel(self.config.background_pixel)
-            .border_pixel(self.config.border_pixel)
+            .border_pixel(self.config.active_border_pixel)
             .colormap(attr.colormap);
         self.conn.create_window(
             geom.depth,
@@ -388,6 +390,18 @@ where
                     .event_mask(xproto::EventMask::PROPERTY_CHANGE),
             )?
             .check()?;
+        for (idx, client) in self.clients.iter().enumerate() {
+            if idx != self.clients.len() - 1 {
+                // it's not the one we currently added
+                self.conn
+                    .change_window_attributes(
+                        client.frame,
+                        &xproto::ChangeWindowAttributesAux::new()
+                            .border_pixel(self.config.inactive_border_pixel),
+                    )?
+                    .check()?;
+            }
+        }
         Ok(())
     }
 
@@ -398,10 +412,19 @@ where
         self.conn
             .set_input_focus(xproto::InputFocus::PARENT, client.window, CURRENT_TIME)?
             .check()?;
-        self.conn.configure_window(
-            client.frame,
-            &xproto::ConfigureWindowAux::new().stack_mode(xproto::StackMode::ABOVE),
-        )?;
+        self.conn
+            .configure_window(
+                client.frame,
+                &xproto::ConfigureWindowAux::new().stack_mode(xproto::StackMode::ABOVE),
+            )?
+            .check()?;
+        self.conn
+            .change_window_attributes(
+                client.frame,
+                &xproto::ChangeWindowAttributesAux::new()
+                    .border_pixel(self.config.active_border_pixel),
+            )?
+            .check()?;
         if let Ok(geom) = self.conn.get_geometry(ev.child)?.reply() {
             self.button_press_geometry = Some(Geometry {
                 x: geom.x,
@@ -417,6 +440,17 @@ where
             });
         }
         self.focused = Some(client_idx);
+        for (idx, client) in self.clients.iter().enumerate() {
+            if idx != client_idx {
+                self.conn
+                    .change_window_attributes(
+                        client.frame,
+                        &xproto::ChangeWindowAttributesAux::new()
+                            .border_pixel(self.config.inactive_border_pixel),
+                    )?
+                    .check()?;
+            }
+        }
         Ok(())
     }
 
@@ -596,7 +630,6 @@ where
     }
 
     fn handle_client_message(&mut self, ev: &xproto::ClientMessageEvent) -> Result<()> {
-        println!("ClientMessage");
         // EWMH § _NET_WM_STATE; sent as a ClientMessage. in this the only thing we handle right
         // now is fullscreen messages.
         if ev.type_ == self.net_atoms[ewmh::Net::WMState as usize] {
@@ -718,14 +751,32 @@ where
                         .check()?;
                     self.update_tag_state()?;
                 }
-                data if data[0] == ipc::IPC::BorderPixel as u32 => {
-                    self.config.border_pixel = data[1];
-                    for client in self.clients.iter() {
+                data if data[0] == ipc::IPC::ActiveBorderPixel as u32 => {
+                    self.config.active_border_pixel = data[1];
+                    for (idx, client) in self.clients.iter().enumerate() {
+                        if idx != self.focused.ok_or("client_message: no focused window")? {
+                            continue;
+                        }
                         self.conn
                             .change_window_attributes(
                                 client.frame,
                                 &xproto::ChangeWindowAttributesAux::new()
-                                    .border_pixel(self.config.border_pixel),
+                                    .border_pixel(self.config.active_border_pixel),
+                            )?
+                            .check()?;
+                    }
+                }
+                data if data[0] == ipc::IPC::InactiveBorderPixel as u32 => {
+                    self.config.inactive_border_pixel = data[1];
+                    for (idx, client) in self.clients.iter().enumerate() {
+                        if idx == self.focused.ok_or("client_message: no focused window")? {
+                            continue;
+                        }
+                        self.conn
+                            .change_window_attributes(
+                                client.frame,
+                                &xproto::ChangeWindowAttributesAux::new()
+                                    .border_pixel(self.config.inactive_border_pixel),
                             )?
                             .check()?;
                     }

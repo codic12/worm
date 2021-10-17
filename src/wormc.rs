@@ -23,8 +23,15 @@ fn main() -> Result<()> {
             match args[1].as_ref() {
                 "kill-active-client" => [ipc::IPC::KillActiveClient as u32, 0, 0, 0, 0],
                 "switch-tag" => [ipc::IPC::SwitchTag as u32, args[2].parse::<u32>()?, 0, 0, 0],
-                "border-pixel" => [
-                    ipc::IPC::BorderPixel as u32,
+                "active-border-pixel" => [
+                    ipc::IPC::ActiveBorderPixel as u32,
+                    args[2].parse::<u32>()?,
+                    0,
+                    0,
+                    0,
+                ],
+                "inactive-border-pixel" => [
+                    ipc::IPC::InactiveBorderPixel as u32,
                     args[2].parse::<u32>()?,
                     0,
                     0,

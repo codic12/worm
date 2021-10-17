@@ -19,5 +19,11 @@ xfce4-terminal
 # Set border width to 1 px
 wormc border-width 1
 
-# Set border color (base 10 value). F.e.: 0x1793D1 -> 1545169
-wormc border-pixel 1545169
+# Set border color (base 16 value). F.e.: 0x1793D1 -> 1545169
+# The first two characters are used as the opacity if you are running a compositor.
+# If you want a solid frame, use FFRRGGBB. (note: these characters can technically
+# be anywhere because it isn't part of the X standard, but in reality on sane
+# servers they are the first two).
+
+wormc active-border-pixel $((16#FF1793D1))
+wormc inactive-border-pixel $((16#FF7A8478))

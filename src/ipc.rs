@@ -10,7 +10,8 @@ pub enum IPC {
     ClientMessage,
     KillActiveClient,
     SwitchTag,
-    BorderPixel,
+    ActiveBorderPixel,
+    InactiveBorderPixel,
     BorderWidth,
     BackgroundPixel,
     TitleHeight,
@@ -34,7 +35,10 @@ where
             .reply()?
             .atom,
         conn.intern_atom(false, b"_WORM_SWITCH_TAG")?.reply()?.atom,
-        conn.intern_atom(false, b"_WORM_BORDER_PIXEL")?
+        conn.intern_atom(false, b"_WORM_ACTIVE_BORDER_PIXEL")?
+            .reply()?
+            .atom,
+        conn.intern_atom(false, b"_WORM_INACTIVE_BORDER_PIXEL")?
             .reply()?
             .atom,
         conn.intern_atom(false, b"_WORM_BORDER_WIDTH")?
