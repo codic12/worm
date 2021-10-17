@@ -554,7 +554,7 @@ where
                 client.window,
                 &xproto::ConfigureWindowAux::from_configure_request(ev)
                     .x(0)
-                    .y(15),
+                    .y(self.config.title_height as i32),
             )?
             .check()?;
         Ok(())
@@ -596,7 +596,7 @@ where
     }
 
     fn handle_client_message(&mut self, ev: &xproto::ClientMessageEvent) -> Result<()> {
-		println!("ClientMessage");
+        println!("ClientMessage");
         // EWMH § _NET_WM_STATE; sent as a ClientMessage. in this the only thing we handle right
         // now is fullscreen messages.
         if ev.type_ == self.net_atoms[ewmh::Net::WMState as usize] {
