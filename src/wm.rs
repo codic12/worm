@@ -401,8 +401,8 @@ where
             .get_property(
                 false,
                 ev.window,
-                xproto::AtomEnum::WM_NAME,
-                xproto::AtomEnum::STRING,
+                self.net_atoms[ewmh::Net::WMName as usize],
+                self.conn.intern_atom(false, b"UTF8_STRING")?.reply()?.atom,
                 0,
                 std::u32::MAX,
             )?
@@ -415,7 +415,7 @@ where
                 5,
                 18,
                 std::ffi::CString::new(&*title.value)?.as_ptr() as *const u8,
-                title.value.len() as i32
+                title.value.len() as i32,
             );
         }
         self.focused = Some(self.clients.len() - 1);
