@@ -1,6 +1,8 @@
 extern crate x11;
 extern crate x11rb;
 
+use std::mem::MaybeUninit;
+
 use crate::{ewmh, ipc};
 use protocol::{
     xinerama,
@@ -33,7 +35,7 @@ struct Client {
     pub fullscreen: bool,
     pub before_geom: Option<Geometry>,
     pub tags: TagSet,
-    pub draw: *const xft::XftDraw,
+    pub draw: *mut xft::XftDraw,
 }
 
 /// Global configuration for the window manager.
@@ -93,6 +95,8 @@ where
     config: Config,
     tags: TagSet,
     focused: Option<usize>,
+    text_color: xft::XftColor,
+    text_font: *mut xft::XftFont,
 }
 
 impl<'a, C> WindowManager<'a, C>
@@ -187,6 +191,19 @@ where
             b"worm",
         )?
         .check()?;
+        let mut text_color = std::mem::MaybeUninit::<xft::XftColor>::uninit();
+        if unsafe {
+            xft::XftColorAllocName(
+                xlib_conn,
+                xlib::XDefaultVisual(xlib_conn, 0),
+                xlib::XDefaultColormap(xlib_conn, 0),
+                std::ffi::CString::new("#ffffff")?.as_ptr(),
+                text_color.as_mut_ptr(),
+            )
+        } == 0
+        {
+            return Err(Box::from("constructor: failed to allocate color for xft"));
+        }
         Ok(Self {
             conn,
             scrno,
@@ -206,6 +223,14 @@ where
             tags: TagSet::default(),
             focused: None,
             xlib_conn,
+            text_color: unsafe { text_color.assume_init() },
+            text_font: unsafe {
+                xft::XftFontOpenName(
+                    xlib_conn,
+                    xlib::XDefaultScreen(xlib_conn),
+                    std::ffi::CString::new("Noto Sans Mono:size=11.5:antialias=true")?.as_ptr(),
+                )
+            },
         })
     }
 
@@ -370,6 +395,18 @@ where
                 )
             },
         });
+        // Draw text on the frame window.
+        unsafe {
+            xft::XftDrawStringUtf8(
+                self.clients[self.clients.len() - 1].draw,
+                &self.text_color,
+                self.text_font,
+                5,
+                18,
+                std::ffi::CString::new("Window Title")?.as_ptr() as *const u8,
+                3,
+            );
+        }
         self.focused = Some(self.clients.len() - 1);
         self.conn
             .set_input_focus(xproto::InputFocus::PARENT, ev.window, CURRENT_TIME)?
@@ -885,7 +922,5 @@ impl<'a, C> Drop for WindowManager<'a, C>
 where
     C: connection::Connection,
 {
-    fn drop(&mut self) {
-        unreachable!();
-    }
+    fn drop(&mut self) {}
 }
