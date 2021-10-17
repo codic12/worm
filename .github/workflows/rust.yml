@@ -16,6 +16,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Install libx11-xcb-dev
+      run: sudo apt-get install libx11-xcb-dev -y
     - name: Build
       run: cargo build --verbose
     - name: Run tests
