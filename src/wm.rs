@@ -1,13 +1,16 @@
+extern crate x11;
 extern crate x11rb;
+
 use crate::{ewmh, ipc};
 use protocol::{
     xinerama,
     xproto::{self, ConnectionExt},
 };
+use x11::*;
 use x11rb::wrapper::ConnectionExt as OtherConnectionExt;
 use x11rb::*;
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 struct Geometry {
     pub x: i16,
     pub y: i16,
@@ -15,7 +18,7 @@ struct Geometry {
     pub height: u16,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 struct MouseMoveStart {
     pub root_x: i16,
     pub root_y: i16,
@@ -24,13 +27,13 @@ struct MouseMoveStart {
 }
 
 /// A visible, top-level window.
-#[derive(Clone, Debug)]
 struct Client {
     pub window: xproto::Window,
     pub frame: xproto::Window,
     pub fullscreen: bool,
     pub before_geom: Option<Geometry>,
     pub tags: TagSet,
+    pub draw: *const xft::XftDraw,
 }
 
 /// Global configuration for the window manager.
@@ -80,6 +83,7 @@ where
     C: connection::Connection,
 {
     conn: &'a C,
+    xlib_conn: *mut xlib::Display,
     scrno: usize,
     button_press_geometry: Option<Geometry>,
     mouse_move_start: Option<MouseMoveStart>,
@@ -95,7 +99,7 @@ impl<'a, C> WindowManager<'a, C>
 where
     C: connection::Connection,
 {
-    pub fn new(conn: &'a C, scrno: usize) -> Result<Self> {
+    pub fn new(conn: &'a C, scrno: usize, xlib_conn: *mut xlib::Display) -> Result<Self> {
         let screen = &conn.setup().roots[scrno];
         for button in [xproto::ButtonIndex::M1, xproto::ButtonIndex::M3] {
             match conn
@@ -201,6 +205,7 @@ where
             },
             tags: TagSet::default(),
             focused: None,
+            xlib_conn,
         })
     }
 
@@ -263,7 +268,6 @@ where
             protocol::Event::DestroyNotify(ev) => self.handle_destroy_notify(ev)?,
             protocol::Event::ClientMessage(ev) => self.handle_client_message(ev)?,
             protocol::Event::ConfigureNotify(ev) => self.handle_configure_notify(ev)?,
-            protocol::Event::PropertyNotify(ev) => self.handle_property_notify(ev)?,
             _ => {}
         }
         Ok(())
@@ -357,6 +361,14 @@ where
             fullscreen: false,
             before_geom: None,
             tags: self.tags.clone(), // this window has whatever tags user is currently on; we want to clone it instead of storing a reference, because the client's tags are independent, this is just a starting point
+            draw: unsafe {
+                xft::XftDrawCreate(
+                    self.xlib_conn,
+                    frame_win.into(),
+                    xlib::XDefaultVisual(self.xlib_conn, 0i32),
+                    screen.default_colormap.into(),
+                )
+            },
         });
         self.focused = Some(self.clients.len() - 1);
         self.conn
@@ -867,8 +879,13 @@ where
             .check()?;
         Ok(())
     }
+}
 
-    fn handle_property_notify(&self, ev: &xproto::PropertyNotifyEvent) -> Result<()> {
-        Ok(())
+impl<'a, C> Drop for WindowManager<'a, C>
+where
+    C: connection::Connection,
+{
+    fn drop(&mut self) {
+        unreachable!();
     }
 }

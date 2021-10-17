@@ -7,8 +7,9 @@ default-run = "worm"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-x11rb = { version = "*", features = ["xinerama"] }
+x11rb = { version = "*", features = ["xinerama", "allow-unsafe-code"] }
 dirs = "*"
+x11 = "*"
 
 [profile.release]
 lto = true
