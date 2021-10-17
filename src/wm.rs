@@ -197,7 +197,7 @@ where
                 xlib_conn,
                 xlib::XDefaultVisual(xlib_conn, 0),
                 xlib::XDefaultColormap(xlib_conn, 0),
-                std::ffi::CString::new("#ffffff")?.as_ptr(),
+                std::ffi::CString::new("#FFFFFF")?.as_ptr(),
                 text_color.as_mut_ptr(),
             )
         } == 0
@@ -390,12 +390,23 @@ where
                 xft::XftDrawCreate(
                     self.xlib_conn,
                     frame_win.into(),
-                    xlib::XDefaultVisual(self.xlib_conn, 0i32),
-                    screen.default_colormap.into(),
+                    xlib::XDefaultVisual(self.xlib_conn, 0),
+                    xlib::XDefaultColormap(self.xlib_conn, 0),
                 )
             },
         });
-        // Draw text on the frame window.
+        // Draw title on the frame window.
+        let title = self
+            .conn
+            .get_property(
+                false,
+                ev.window,
+                xproto::AtomEnum::WM_NAME,
+                xproto::AtomEnum::STRING,
+                0,
+                std::u32::MAX,
+            )?
+            .reply()?;
         unsafe {
             xft::XftDrawStringUtf8(
                 self.clients[self.clients.len() - 1].draw,
@@ -403,8 +414,8 @@ where
                 self.text_font,
                 5,
                 18,
-                std::ffi::CString::new("Window Title")?.as_ptr() as *const u8,
-                3,
+                std::ffi::CString::new(&*title.value)?.as_ptr() as *const u8,
+                title.value.len() as i32
             );
         }
         self.focused = Some(self.clients.len() - 1);
