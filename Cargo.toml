@@ -9,7 +9,7 @@ default-run = "worm"
 [dependencies]
 x11rb = { version = "*", features = ["xinerama", "allow-unsafe-code"] }
 dirs = "*"
-x11 = "*"
+# x11 = "*"
 
 [profile.release]
 lto = true

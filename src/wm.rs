@@ -1,18 +1,13 @@
-extern crate x11;
 extern crate x11rb;
-
-use std::mem::MaybeUninit;
-
 use crate::{ewmh, ipc};
 use protocol::{
     xinerama,
     xproto::{self, ConnectionExt},
 };
-use x11::*;
 use x11rb::wrapper::ConnectionExt as OtherConnectionExt;
 use x11rb::*;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct Geometry {
     pub x: i16,
     pub y: i16,
@@ -20,7 +15,7 @@ struct Geometry {
     pub height: u16,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct MouseMoveStart {
     pub root_x: i16,
     pub root_y: i16,
@@ -29,13 +24,13 @@ struct MouseMoveStart {
 }
 
 /// A visible, top-level window.
+#[derive(Clone, Debug)]
 struct Client {
     pub window: xproto::Window,
     pub frame: xproto::Window,
     pub fullscreen: bool,
     pub before_geom: Option<Geometry>,
     pub tags: TagSet,
-    pub draw: *mut xft::XftDraw,
 }
 
 /// Global configuration for the window manager.
@@ -85,7 +80,6 @@ where
     C: connection::Connection,
 {
     conn: &'a C,
-    xlib_conn: *mut xlib::Display,
     scrno: usize,
     button_press_geometry: Option<Geometry>,
     mouse_move_start: Option<MouseMoveStart>,
@@ -95,15 +89,13 @@ where
     config: Config,
     tags: TagSet,
     focused: Option<usize>,
-    text_color: xft::XftColor,
-    text_font: *mut xft::XftFont,
 }
 
 impl<'a, C> WindowManager<'a, C>
 where
     C: connection::Connection,
 {
-    pub fn new(conn: &'a C, scrno: usize, xlib_conn: *mut xlib::Display) -> Result<Self> {
+    pub fn new(conn: &'a C, scrno: usize) -> Result<Self> {
         let screen = &conn.setup().roots[scrno];
         for button in [xproto::ButtonIndex::M1, xproto::ButtonIndex::M3] {
             match conn
@@ -191,19 +183,6 @@ where
             b"worm",
         )?
         .check()?;
-        let mut text_color = std::mem::MaybeUninit::<xft::XftColor>::uninit();
-        if unsafe {
-            xft::XftColorAllocName(
-                xlib_conn,
-                xlib::XDefaultVisual(xlib_conn, 0),
-                xlib::XDefaultColormap(xlib_conn, 0),
-                std::ffi::CString::new("#FFFFFF")?.as_ptr(),
-                text_color.as_mut_ptr(),
-            )
-        } == 0
-        {
-            return Err(Box::from("constructor: failed to allocate color for xft"));
-        }
         Ok(Self {
             conn,
             scrno,
@@ -222,15 +201,6 @@ where
             },
             tags: TagSet::default(),
             focused: None,
-            xlib_conn,
-            text_color: unsafe { text_color.assume_init() },
-            text_font: unsafe {
-                xft::XftFontOpenName(
-                    xlib_conn,
-                    xlib::XDefaultScreen(xlib_conn),
-                    std::ffi::CString::new("Noto Sans Mono:size=11.5:antialias=true")?.as_ptr(),
-                )
-            },
         })
     }
 
@@ -293,6 +263,7 @@ where
             protocol::Event::DestroyNotify(ev) => self.handle_destroy_notify(ev)?,
             protocol::Event::ClientMessage(ev) => self.handle_client_message(ev)?,
             protocol::Event::ConfigureNotify(ev) => self.handle_configure_notify(ev)?,
+            protocol::Event::PropertyNotify(ev) => self.handle_property_notify(ev)?,
             _ => {}
         }
         Ok(())
@@ -386,38 +357,7 @@ where
             fullscreen: false,
             before_geom: None,
             tags: self.tags.clone(), // this window has whatever tags user is currently on; we want to clone it instead of storing a reference, because the client's tags are independent, this is just a starting point
-            draw: unsafe {
-                xft::XftDrawCreate(
-                    self.xlib_conn,
-                    frame_win.into(),
-                    xlib::XDefaultVisual(self.xlib_conn, 0),
-                    xlib::XDefaultColormap(self.xlib_conn, 0),
-                )
-            },
         });
-        // Draw title on the frame window.
-        let title = self
-            .conn
-            .get_property(
-                false,
-                ev.window,
-                self.net_atoms[ewmh::Net::WMName as usize],
-                self.conn.intern_atom(false, b"UTF8_STRING")?.reply()?.atom,
-                0,
-                std::u32::MAX,
-            )?
-            .reply()?;
-        unsafe {
-            xft::XftDrawStringUtf8(
-                self.clients[self.clients.len() - 1].draw,
-                &self.text_color,
-                self.text_font,
-                5,
-                18,
-                std::ffi::CString::new(&*title.value)?.as_ptr() as *const u8,
-                title.value.len() as i32,
-            );
-        }
         self.focused = Some(self.clients.len() - 1);
         self.conn
             .set_input_focus(xproto::InputFocus::PARENT, ev.window, CURRENT_TIME)?
@@ -927,11 +867,9 @@ where
             .check()?;
         Ok(())
     }
+
+    fn handle_property_notify(&self, ev: &xproto::PropertyNotifyEvent) -> Result<()> {
+        Ok(())
+    }
 }
 
-impl<'a, C> Drop for WindowManager<'a, C>
-where
-    C: connection::Connection,
-{
-    fn drop(&mut self) {}
-}
