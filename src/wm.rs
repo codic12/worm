@@ -219,7 +219,6 @@ where
             let _ = self.conn.flush();
             let ev = match self.conn.wait_for_event() {
                 Ok(ev) => ev,
-
                 Err(_) => continue,
             };
             let _ = self.dispatch_event(&ev);
@@ -751,6 +750,20 @@ where
                     client.before_geom = None; // so that if somehow this case is hit but before_geom is not set, then the condition at the top returns early with an error
                 }
             }
+        } else if ev.type_ == self.net_atoms[ewmh::Net::CurrentDesktop as usize] {
+            let data = ev.data.as_data32();
+            let screen = &self.conn.setup().roots[self.scrno];
+            self.tags.switch_tag(data[0] as usize);
+            self.conn
+                .change_property32(
+                    xproto::PropMode::REPLACE,
+                    screen.root,
+                    self.net_atoms[ewmh::Net::CurrentDesktop as usize],
+                    xproto::AtomEnum::CARDINAL,
+                    &[data[0]],
+                )?
+                .check()?;
+            self.update_tag_state()?;
         } else if ev.type_ == self.ipc_atoms[ipc::IPC::ClientMessage as usize] {
             let data = ev.data.as_data32();
             match data {
