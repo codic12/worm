@@ -273,17 +273,35 @@ where
             protocol::Event::DestroyNotify(ev) => self.handle_destroy_notify(ev)?,
             protocol::Event::ClientMessage(ev) => self.handle_client_message(ev)?,
             protocol::Event::ConfigureNotify(ev) => self.handle_configure_notify(ev)?,
-            protocol::Event::PropertyNotify(ev) => self.handle_property_notify(ev)?,
             _ => {}
         }
         Ok(())
     }
 
-    fn handle_map_request(&mut self, ev: &xproto::MapRequestEvent) -> Result<()> {
+    fn update_client_list(&self) -> Result<()> {
+        let screen = &self.conn.setup().roots[self.scrno];
+        let clients_with_windows = self
+            .clients
+            .iter()
+            .map(|client| client.window)
+            .collect::<Vec<xproto::Window>>();
+        self.conn
+            .change_property32(
+                xproto::PropMode::REPLACE,
+                screen.root,
+                self.net_atoms[ewmh::Net::ClientList as usize],
+                xproto::AtomEnum::WINDOW,
+                &clients_with_windows,
+            )?
+            .check()?;
+        Ok(())
+    }
+
+    fn manage_window(&mut self, win: xproto::Window) -> Result<()> {
         // we don't want it to already exist if we're gonna reparent it
-        let client = self.find_client(|client| client.window == ev.window);
+        let client = self.find_client(|client| client.window == win);
         if client.is_some() {
-            self.conn.map_window(ev.window)?.check()?;
+            self.conn.map_window(win)?.check()?;
             // but it's still a client, so don't change any frame stuff, early return
             return Ok(()); // not really an error
         }
@@ -292,7 +310,7 @@ where
             .conn
             .get_property(
                 false,
-                ev.window,
+                win,
                 self.net_atoms[ewmh::Net::WMWindowType as usize],
                 xproto::AtomEnum::ATOM,
                 0,
@@ -301,7 +319,7 @@ where
             .reply()?;
         for prop in reply.value {
             if prop == self.net_atoms[ewmh::Net::WMWindowTypeDock as usize] as u8 {
-                self.conn.map_window(ev.window)?.check()?;
+                self.conn.map_window(win)?.check()?;
                 return Ok(());
             }
         }
@@ -309,7 +327,7 @@ where
         self.conn
             .change_property32(
                 xproto::PropMode::REPLACE,
-                ev.window,
+                win,
                 self.net_atoms[ewmh::Net::FrameExtents as usize],
                 xproto::AtomEnum::CARDINAL,
                 &[
@@ -321,8 +339,8 @@ where
             )?
             .check()?;
         let screen = &self.conn.setup().roots[self.scrno];
-        let geom = self.conn.get_geometry(ev.window)?.reply()?;
-        let attr = self.conn.get_window_attributes(ev.window)?.reply()?;
+        let geom = self.conn.get_geometry(win)?.reply()?;
+        let attr = self.conn.get_window_attributes(win)?.reply()?;
         let frame_win = self.conn.generate_id()?;
         let win_aux = xproto::CreateWindowAux::new()
             .event_mask(
@@ -353,16 +371,16 @@ where
         )?;
         self.conn.grab_server()?.check()?;
         self.conn
-            .change_save_set(xproto::SetMode::INSERT, ev.window)?
+            .change_save_set(xproto::SetMode::INSERT, win)?
             .check()?;
         self.conn
-            .reparent_window(ev.window, frame_win, 0, self.config.title_height as i16)?
+            .reparent_window(win, frame_win, 0, self.config.title_height as i16)?
             .check()?;
-        self.conn.map_window(ev.window)?.check()?;
+        self.conn.map_window(win)?.check()?;
         self.conn.map_window(frame_win)?.check()?;
         self.conn.ungrab_server()?.check()?;
         self.clients.push(Client {
-            window: ev.window,
+            window: win,
             frame: frame_win,
             fullscreen: false,
             before_geom: None,
@@ -370,7 +388,7 @@ where
         });
         self.focused = Some(self.clients.len() - 1);
         self.conn
-            .set_input_focus(xproto::InputFocus::PARENT, ev.window, CURRENT_TIME)?
+            .set_input_focus(xproto::InputFocus::PARENT, win, CURRENT_TIME)?
             .check()?;
         self.conn.configure_window(
             frame_win,
@@ -387,7 +405,7 @@ where
         self.conn
             .change_property32(
                 xproto::PropMode::REPLACE,
-                ev.window,
+                win,
                 self.net_atoms[ewmh::Net::WMDesktop as usize],
                 xproto::AtomEnum::CARDINAL,
                 &[tag_idx as u32],
@@ -395,7 +413,7 @@ where
             .check()?;
         self.conn
             .change_window_attributes(
-                ev.window,
+                win,
                 &xproto::ChangeWindowAttributesAux::new()
                     .event_mask(xproto::EventMask::PROPERTY_CHANGE),
             )?
@@ -413,20 +431,12 @@ where
             }
         }
         // finally, update _NET_CLIENT_LIST atom.
-        let clients_with_windows = self
-            .clients
-            .iter()
-            .map(|client| client.window)
-            .collect::<Vec<xproto::Window>>();
-        self.conn
-            .change_property32(
-                xproto::PropMode::REPLACE,
-                screen.root,
-                self.net_atoms[ewmh::Net::ClientList as usize],
-                xproto::AtomEnum::WINDOW,
-                &clients_with_windows,
-            )?
-            .check()?;
+        self.update_client_list()?;
+        Ok(())
+    }
+
+    fn handle_map_request(&mut self, ev: &xproto::MapRequestEvent) -> Result<()> {
+        self.manage_window(ev.window)?;
         Ok(())
     }
 
@@ -619,14 +629,15 @@ where
         Ok(())
     }
 
-    fn handle_unmap_notify(&mut self, ev: &xproto::UnmapNotifyEvent) -> Result<()> {
-        // We get an UnmapNotify when a window unmaps itself from the screen (we can't redirect
-        // this to requests, only listen to notify events). In this case, we should also unmap it's
-        // parent window, the frame, and remove it from the list of clients
+    fn unmanage_window(&mut self, win: xproto::Window, destroy_frame: bool) -> Result<()> {
         let (client, client_idx) = self
-            .find_client(|client| client.window == ev.window)
+            .find_client(|client| client.window == win)
             .ok_or("unmap_notify: unmap on non client window, ignoring")?;
-        self.conn.unmap_window(client.frame)?.check()?;
+        if destroy_frame {
+            self.conn.destroy_window(client.frame)?.check()?;
+        } else {
+            self.conn.unmap_window(client.frame)?.check()?;
+        }
         self.clients.remove(client_idx);
         self.focused = None;
         let screen = &self.conn.setup().roots[self.scrno];
@@ -638,47 +649,17 @@ where
             .iter()
             .map(|client| client.window)
             .collect::<Vec<xproto::Window>>();
-        self.conn
-            .change_property32(
-                xproto::PropMode::REPLACE,
-                screen.root,
-                self.net_atoms[ewmh::Net::ClientList as usize],
-                xproto::AtomEnum::WINDOW,
-                &clients_with_windows,
-            )?
-            .check()?;
+        self.update_client_list()?;
+        Ok(())
+    }
+
+    fn handle_unmap_notify(&mut self, ev: &xproto::UnmapNotifyEvent) -> Result<()> {
+        self.unmanage_window(ev.window, false)?;
         Ok(())
     }
 
     fn handle_destroy_notify(&mut self, ev: &xproto::DestroyNotifyEvent) -> Result<()> {
-        // The same idea as UnmapNotify; this is generally recieved after UnmapNotify (but not
-        // always!), so it won't run. In some cases, though, e.g. when applications are
-        // force-killed and the process doesn't have a chance to clean up, we get a DestroyNotify
-        // without an UnmapNotify. That's where this comes into play.
-        let (client, client_idx) = self
-            .find_client(|client| client.window == ev.window)
-            .ok_or("destroy_notify: destroy on non client window, ignoring")?;
-        self.conn.destroy_window(client.frame)?.check()?;
-        self.clients.remove(client_idx);
-        self.focused = None;
-        let screen = &self.conn.setup().roots[self.scrno];
-        self.conn
-            .set_input_focus(xproto::InputFocus::POINTER_ROOT, screen.root, CURRENT_TIME)?
-            .check()?;
-        let clients_with_windows = self
-            .clients
-            .iter()
-            .map(|client| client.window)
-            .collect::<Vec<xproto::Window>>();
-        self.conn
-            .change_property32(
-                xproto::PropMode::REPLACE,
-                screen.root,
-                self.net_atoms[ewmh::Net::ClientList as usize],
-                xproto::AtomEnum::WINDOW,
-                &clients_with_windows,
-            )?
-            .check()?;
+        self.unmanage_window(ev.window, true)?;
         Ok(())
     }
 
@@ -946,10 +927,6 @@ where
                     .height(ev.height as u32 + self.config.title_height),
             )?
             .check()?;
-        Ok(())
-    }
-
-    fn handle_property_notify(&self, ev: &xproto::PropertyNotifyEvent) -> Result<()> {
         Ok(())
     }
 }
