@@ -800,10 +800,6 @@ where
                     let focused = self
                         .focused
                         .ok_or("client_message: no focused window to kill")?; // todo: get_input_focus
-                    if focused > (self.clients.len() - 1) {
-                        self.focused = None;
-                        return Ok(()); // race cond?
-                    }
                     self.conn
                         .kill_client(self.clients[focused].window)?
                         .check()?;
@@ -812,10 +808,6 @@ where
                     let focused = self
                         .focused
                         .ok_or("client_message: no focused window to close")?; // todo: get_input_focus
-                    if focused > (self.clients.len() - 1) {
-                        self.focused = None;
-                        return Ok(()); // race cond?
-                    }
                     self.conn
                         .send_event(
                             false,
@@ -833,6 +825,32 @@ where
                                     0,
                                 ],
                             ),
+                        )?
+                        .check()?;
+                }
+                data if data[0] == ipc::IPC::MaximizeActiveClient as u32 => {
+                    let focused = &self.clients[self
+                        .focused
+                        .ok_or("client_message: no focused window to maximized")?];
+                    let ss = xinerama::get_screen_size(self.conn, focused.window, 0)?.reply()?; // get the screen size
+                    self.conn
+                        .configure_window(
+                            focused.frame,
+                            &xproto::ConfigureWindowAux::new()
+                                .x(0)
+                                .y(0)
+                                .width(ss.width - self.config.border_width*2 )
+                                .height(ss.height - self.config.border_width*2),
+                        )?
+                        .check()?;
+                    self.conn
+                        .configure_window(
+                            focused.window,
+                            &xproto::ConfigureWindowAux::new()
+                                .x(0)
+                                .y(self.config.title_height as i32)
+                                .width(ss.width- self.config.border_width*2)
+                                .height(ss.height - self.config.border_width*2- self.config.title_height),
                         )?
                         .check()?;
                 }

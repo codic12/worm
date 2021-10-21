@@ -10,6 +10,7 @@ pub enum IPC {
     ClientMessage,
     KillActiveClient,
     CloseActiveClient,
+    MaximizeActiveClient,
     SwitchTag,
     ActiveBorderPixel,
     InactiveBorderPixel,
@@ -33,6 +34,9 @@ where
             .reply()?
             .atom,
         conn.intern_atom(false, b"_WORM_KILL_ACTIVE_CLIENT")?
+            .reply()?
+            .atom,
+        conn.intern_atom(false, b"_WORM_MAXIMIZE_ACTIVE_CLIENT")?
             .reply()?
             .atom,
         conn.intern_atom(false, b"_WORM_CLOSE_ACTIVE_CLIENT")?
