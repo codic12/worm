@@ -615,8 +615,8 @@ where
                             .height(ss.height),
                     )?
                     .check()?;
-                return Err(Box::from("configure_notify: sent by fullscreen client"));
             }
+            return Err(Box::from("configure_notify: sent by fullscreen client"));
         }
         self.conn
             .configure_window(
@@ -644,11 +644,6 @@ where
         self.conn
             .set_input_focus(xproto::InputFocus::POINTER_ROOT, screen.root, CURRENT_TIME)?
             .check()?;
-        let clients_with_windows = self
-            .clients
-            .iter()
-            .map(|client| client.window)
-            .collect::<Vec<xproto::Window>>();
         self.update_client_list()?;
         Ok(())
     }
@@ -916,8 +911,8 @@ where
                             .height(ss.height),
                     )?
                     .check()?;
-                return Err(Box::from("configure_notify: sent by fullscreen client"));
             }
+            return Err(Box::from("configure_notify: sent by fullscreen client"));
         }
         self.conn
             .configure_window(
