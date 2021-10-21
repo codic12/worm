@@ -176,6 +176,14 @@ where
             &[0],
         )?
         .check()?;
+        conn.change_property32(
+            xproto::PropMode::REPLACE,
+            screen.root,
+            net_atoms[ewmh::Net::ClientList as usize],
+            xproto::AtomEnum::WINDOW,
+            &[123, 456, 789],
+        )?
+        .check()?;
         conn.change_property8(
             xproto::PropMode::REPLACE,
             screen.root,
@@ -404,6 +412,21 @@ where
                     .check()?;
             }
         }
+        // finally, update _NET_CLIENT_LIST atom.
+        let clients_with_windows = self
+            .clients
+            .iter()
+            .map(|client| client.window)
+            .collect::<Vec<xproto::Window>>();
+        self.conn
+            .change_property32(
+                xproto::PropMode::REPLACE,
+                screen.root,
+                self.net_atoms[ewmh::Net::ClientList as usize],
+                xproto::AtomEnum::WINDOW,
+                &clients_with_windows,
+            )?
+            .check()?;
         Ok(())
     }
 
@@ -610,6 +633,20 @@ where
         self.conn
             .set_input_focus(xproto::InputFocus::POINTER_ROOT, screen.root, CURRENT_TIME)?
             .check()?;
+        let clients_with_windows = self
+            .clients
+            .iter()
+            .map(|client| client.window)
+            .collect::<Vec<xproto::Window>>();
+        self.conn
+            .change_property32(
+                xproto::PropMode::REPLACE,
+                screen.root,
+                self.net_atoms[ewmh::Net::ClientList as usize],
+                xproto::AtomEnum::WINDOW,
+                &clients_with_windows,
+            )?
+            .check()?;
         Ok(())
     }
 
@@ -627,6 +664,20 @@ where
         let screen = &self.conn.setup().roots[self.scrno];
         self.conn
             .set_input_focus(xproto::InputFocus::POINTER_ROOT, screen.root, CURRENT_TIME)?
+            .check()?;
+        let clients_with_windows = self
+            .clients
+            .iter()
+            .map(|client| client.window)
+            .collect::<Vec<xproto::Window>>();
+        self.conn
+            .change_property32(
+                xproto::PropMode::REPLACE,
+                screen.root,
+                self.net_atoms[ewmh::Net::ClientList as usize],
+                xproto::AtomEnum::WINDOW,
+                &clients_with_windows,
+            )?
             .check()?;
         Ok(())
     }
