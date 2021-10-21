@@ -181,7 +181,7 @@ where
             screen.root,
             net_atoms[ewmh::Net::ClientList as usize],
             xproto::AtomEnum::WINDOW,
-            &[123, 456, 789],
+            &[],
         )?
         .check()?;
         conn.change_property8(
