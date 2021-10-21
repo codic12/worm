@@ -9,6 +9,7 @@ type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 pub enum IPC {
     ClientMessage,
     KillActiveClient,
+    CloseActiveClient,
     SwitchTag,
     ActiveBorderPixel,
     InactiveBorderPixel,
@@ -32,6 +33,9 @@ where
             .reply()?
             .atom,
         conn.intern_atom(false, b"_WORM_KILL_ACTIVE_CLIENT")?
+            .reply()?
+            .atom,
+        conn.intern_atom(false, b"_WORM_CLOSE_ACTIVE_CLIENT")?
             .reply()?
             .atom,
         conn.intern_atom(false, b"_WORM_SWITCH_TAG")?.reply()?.atom,

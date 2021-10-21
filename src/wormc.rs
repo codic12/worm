@@ -22,6 +22,7 @@ fn main() -> Result<()> {
             atoms[ipc::IPC::ClientMessage as usize],
             match args[1].as_ref() {
                 "kill-active-client" => [ipc::IPC::KillActiveClient as u32, 0, 0, 0, 0],
+                "close-active-client" => [ipc::IPC::CloseActiveClient as u32, 0, 0, 0, 0],
                 "switch-tag" => [ipc::IPC::SwitchTag as u32, args[2].parse::<u32>()?, 0, 0, 0],
                 "active-border-pixel" => [
                     ipc::IPC::ActiveBorderPixel as u32,

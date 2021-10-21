@@ -1,5 +1,5 @@
 extern crate x11rb;
-use crate::{ewmh, ipc};
+use crate::{ewmh, icccm, ipc};
 use protocol::{
     xinerama,
     xproto::{self, ConnectionExt},
@@ -85,6 +85,7 @@ where
     mouse_move_start: Option<MouseMoveStart>,
     clients: Vec<Client>,
     net_atoms: [xproto::Atom; ewmh::Net::Last as usize],
+    icccm_atoms: [xproto::Atom; icccm::Icccm::Last as usize],
     ipc_atoms: [xproto::Atom; ipc::IPC::Last as usize],
     config: Config,
     tags: TagSet,
@@ -191,6 +192,7 @@ where
             clients: Vec::new(),
             net_atoms,
             ipc_atoms: ipc::get_ipc_atoms(conn)?,
+            icccm_atoms: icccm::get_icccm_atoms(conn)?,
             config: Config {
                 border_width: 3,
                 title_height: 15,
@@ -728,13 +730,41 @@ where
                 data if data[0] == ipc::IPC::KillActiveClient as u32 => {
                     let focused = self
                         .focused
-                        .ok_or("client_message: no focused window to kill")?; // todo: get-input_focus
+                        .ok_or("client_message: no focused window to kill")?; // todo: get_input_focus
                     if focused > (self.clients.len() - 1) {
                         self.focused = None;
-                        return Ok(()); // It looks like we hit a race condition... some very fast bad user, or more likely a crappy slow X11 server
+                        return Ok(()); // race cond?
                     }
                     self.conn
                         .kill_client(self.clients[focused].window)?
+                        .check()?;
+                }
+                data if data[0] == ipc::IPC::CloseActiveClient as u32 => {
+                    let focused = self
+                        .focused
+                        .ok_or("client_message: no focused window to close")?; // todo: get_input_focus
+                    if focused > (self.clients.len() - 1) {
+                        self.focused = None;
+                        return Ok(()); // race cond?
+                    }
+                    self.conn
+                        .send_event(
+                            false,
+                            self.clients[focused].window,
+                            xproto::EventMask::NO_EVENT,
+                            &xproto::ClientMessageEvent::new(
+                                32,
+                                self.clients[focused].window,
+                                self.icccm_atoms[icccm::Icccm::WMProtocols as usize],
+                                [
+                                    self.icccm_atoms[icccm::Icccm::WMDeleteWindow as usize],
+                                    0,
+                                    0,
+                                    0,
+                                    0,
+                                ],
+                            ),
+                        )?
                         .check()?;
                 }
                 data if data[0] == ipc::IPC::SwitchTag as u32 => {
@@ -872,4 +902,3 @@ where
         Ok(())
     }
 }
-

@@ -7,6 +7,7 @@ use x11rb::*;
 type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 pub enum Net {
     ActiveWindow,
+    CloseWindow,
     Supported,
     SystemTray,
     SystemTrayOP,
@@ -56,6 +57,7 @@ where
         conn.intern_atom(false, b"_NET_ACTIVE_WINDOW")?
             .reply()?
             .atom,
+        conn.intern_atom(false, b"_NET_CLOSE_WINDOW")?.reply()?.atom,
         conn.intern_atom(false, b"_NET_SUPPORTED")?.reply()?.atom,
         conn.intern_atom(false, b"_NET_SYSTEM_TRAY_S0")?
             .reply()?

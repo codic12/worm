@@ -1,6 +1,7 @@
 extern crate x11rb;
 
 pub mod ewmh;
+pub mod icccm;
 pub mod ipc;
 pub mod wm;
 
