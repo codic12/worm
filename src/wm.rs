@@ -179,6 +179,14 @@ where
         conn.change_property32(
             xproto::PropMode::REPLACE,
             screen.root,
+            net_atoms[ewmh::Net::ActiveWindow as usize],
+            xproto::AtomEnum::WINDOW,
+            &[screen.root],
+        )?
+        .check()?;
+        conn.change_property32(
+            xproto::PropMode::REPLACE,
+            screen.root,
             net_atoms[ewmh::Net::ClientList as usize],
             xproto::AtomEnum::WINDOW,
             &[],
@@ -291,6 +299,23 @@ where
                 self.net_atoms[ewmh::Net::ClientList as usize],
                 xproto::AtomEnum::WINDOW,
                 &clients_with_windows,
+            )?
+            .check()?;
+        Ok(())
+    }
+
+    fn update_active_window(&self) -> Result<()> {
+        let screen = &self.conn.setup().roots[self.scrno];
+        self.conn
+            .change_property32(
+                xproto::PropMode::REPLACE,
+                screen.root,
+                self.net_atoms[ewmh::Net::ActiveWindow as usize],
+                xproto::AtomEnum::WINDOW,
+                &[self.clients[self
+                    .focused
+                    .ok_or("update_active_window: failed to get focused")?]
+                .window],
             )?
             .check()?;
         Ok(())
@@ -431,6 +456,8 @@ where
         }
         // finally, update _NET_CLIENT_LIST atom.
         self.update_client_list()?;
+        // and active window
+        self.update_active_window()?;
         Ok(())
     }
 
@@ -485,6 +512,7 @@ where
                     .check()?;
             }
         }
+        self.update_active_window()?;
         Ok(())
     }
 
@@ -644,6 +672,7 @@ where
             .set_input_focus(xproto::InputFocus::POINTER_ROOT, screen.root, CURRENT_TIME)?
             .check()?;
         self.update_client_list()?;
+        self.update_active_window()?;
         Ok(())
     }
 
