@@ -280,6 +280,7 @@ where
             protocol::Event::DestroyNotify(ev) => self.handle_destroy_notify(ev)?,
             protocol::Event::ClientMessage(ev) => self.handle_client_message(ev)?,
             protocol::Event::ConfigureNotify(ev) => self.handle_configure_notify(ev)?,
+            protocol::Event::Expose(ev) => self.handle_expose(ev)?,
             _ => {}
         }
         Ok(())
@@ -839,8 +840,8 @@ where
                             &xproto::ConfigureWindowAux::new()
                                 .x(0)
                                 .y(0)
-                                .width(ss.width - self.config.border_width*2 )
-                                .height(ss.height - self.config.border_width*2),
+                                .width(ss.width - self.config.border_width * 2)
+                                .height(ss.height - self.config.border_width * 2),
                         )?
                         .check()?;
                     self.conn
@@ -849,8 +850,12 @@ where
                             &xproto::ConfigureWindowAux::new()
                                 .x(0)
                                 .y(self.config.title_height as i32)
-                                .width(ss.width- self.config.border_width*2)
-                                .height(ss.height - self.config.border_width*2- self.config.title_height),
+                                .width(ss.width - self.config.border_width * 2)
+                                .height(
+                                    ss.height
+                                        - self.config.border_width * 2
+                                        - self.config.title_height,
+                                ),
                         )?
                         .check()?;
                 }
@@ -982,6 +987,20 @@ where
                     .height(ev.height as u32 + self.config.title_height),
             )?
             .check()?;
+        Ok(())
+    }
+
+    fn handle_expose(&self, ev: &xproto::ExposeEvent) -> Result<()> {
+        let (client, _) = self
+            .find_client(|client| client.window == ev.window)
+            .ok_or("configure_notify: configure on non client window, ignoring")?;
+        self.conn
+            .set_input_focus(xproto::InputFocus::PARENT, client.window, CURRENT_TIME)?
+            .check()?;
+        self.conn.configure_window(
+            client.frame,
+            &xproto::ConfigureWindowAux::new().stack_mode(xproto::StackMode::ABOVE),
+        )?;
         Ok(())
     }
 }
