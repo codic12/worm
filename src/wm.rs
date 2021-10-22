@@ -993,7 +993,7 @@ where
     fn handle_expose(&self, ev: &xproto::ExposeEvent) -> Result<()> {
         let (client, _) = self
             .find_client(|client| client.window == ev.window)
-            .ok_or("configure_notify: configure on non client window, ignoring")?;
+            .ok_or("expose: expose on non client window, ignoring")?;
         self.conn
             .set_input_focus(xproto::InputFocus::PARENT, client.window, CURRENT_TIME)?
             .check()?;
