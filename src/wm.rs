@@ -113,7 +113,7 @@ where
                     screen.root,
                     NONE,
                     button,
-                    xproto::ModMask::ANY,
+                    xproto::KeyButMask::MOD4,
                 )?
                 .check()
             {
@@ -468,9 +468,6 @@ where
     }
 
     fn handle_button_press(&mut self, ev: &xproto::ButtonPressEvent) -> Result<()> {
-        if ev.state & (1 << 6) != (1 << 6) {
-            return Ok(());
-        }
         let (client, client_idx) = self
             .find_client(|client| client.frame == ev.child)
             .ok_or("button_press: press on non client window, ignoring")?;
@@ -521,9 +518,6 @@ where
     }
 
     fn handle_motion_notify(&mut self, ev: &xproto::MotionNotifyEvent) -> Result<()> {
-        if ev.state & (1 << 6) != (1 << 6) {
-            return Ok(());
-        }
         let (client, _) = self
             .find_client(|client| client.frame == ev.child)
             .ok_or("motion_notify: motion on non client window, ignoring")?;
