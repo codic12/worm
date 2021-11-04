@@ -1,6 +1,5 @@
 **Status report: Worm is currently very usable. It's development, however, is temporarily on hold. I will accept any PRs and try to fix bugs, but I don't plan to add new features at the moment, although I will continue active development later. Right now, I am interested in other projects. Thanks for everyone's support!
-Edit 1: Worm is being developed again, rewritten in the Nim programming language using the Xlib library, due to frustration and bugs with the current version and Rust in general. I'll publish that as soon as it's fairly on feature-parity.
-**
+Edit 1: Worm is being developed again, rewritten in the Nim programming language using the Xlib library, due to frustration and bugs with the current version and Rust in general. I'll publish that as soon as it's fairly on feature-parity.**
 
 # worm
 *worm* is a floating, tag-based window manager for X11. It is written in the Rust programming language, using the X11RB library.
