@@ -1,0 +1,55 @@
+# Launch Apps
+super + shift + {f,w,e}
+	{thunar,firefox,geany}
+
+super + Return
+	kitty
+  
+# Take a screenshot
+Print
+	scrot 'Screenshot_%Y-%m-%d-%S_$wx$h.png' -e 'mv $f $$(xdg-user-dir PICTURES) ; viewnior $$(xdg-user-dir PICTURES)/$f'
+	
+# Take a screenshot in 5 second
+alt + Print	
+	scrot -d 5 'Screenshot_%Y-%m-%d-%S_$wx$h.png' -e 'mv $f $$(xdg-user-dir PICTURES) ; viewnior $$(xdg-user-dir PICTURES)/$f'
+
+# Brighness control
+XF86MonBrightnessUp
+	xbacklight -inc 10
+	
+XF86MonBrightnessDown
+	xbacklight -dec 10
+
+# Volume control
+XF86AudioRaiseVolume
+	amixer set Master 5%+
+
+XF86AudioLowerVolume
+	amixer set Master 5%-
+
+XF86AudioMute
+	amixer set Master toggle
+
+# Restart worm
+super + ctrl + r
+	worm
+
+# Quit worm
+ctrl + alt + q
+	pkill worm
+
+# Close app
+super + q
+	wormc close-active-client
+
+# Maximize app
+super + f
+	wormc maximize-active-client
+
+# Switch active tag
+super + {1,2,3,4}
+	wormc switch-active-window-tag {1,2,3,4}
+
+# Switch tag
+super + shift + {1,2,3,4}
+	wormc switch-tag {1,2,3,4}
