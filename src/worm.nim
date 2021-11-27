@@ -30,7 +30,7 @@ type
   IpcAtom = enum
     IpcClientMessage, IpcBorderActivePixel, IpcBorderInactivePixel,
         IpcBorderWidth, IpcFramePixel, IpcFrameHeight, IpcTextPixel, IpcTextFont, IpcTextOffset, IpcKillClient,
-            IpcCloseClient, IpcSwitchTag, IpcLayout, IpcGaps, IpcMaster, IpcStruts, IpcLast
+            IpcCloseClient, IpcSwitchTag, IpcLayout, IpcGaps, IpcMaster, IpcStruts, IpcMoveTag, IpcLast
             
   Geometry = object
     x, y: int
@@ -132,7 +132,8 @@ func getIpcAtoms*(dpy: ptr Display): array[ord IpcLast, Atom] =
     dpy.XInternAtom("WORM_IPC_LAYOUT", false),
     dpy.XInternAtom("WORM_IPC_MASTER", false),
     dpy.XInternAtom("WORM_IPC_GAPS", false),
-    dpy.XInternAtom("WORM_IPC_STRUTS", false)
+    dpy.XInternAtom("WORM_IPC_STRUTS", false),
+    dpy.XInternAtom("WORM_IPC_MOVE_TAG", false)
   ]
 
 func getProperty[T](
@@ -710,7 +711,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         else:
           if self.focused.isSome: self.focused.get else: return
       # ...
-      self.tileWindows
+      if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[ord IpcStruts]:
       self.config.struts = (
         top: uint ev.data.l[1],
@@ -719,6 +720,21 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         right: uint ev.data.l[4]
       )
       if self.layout == lyTiling: self.tileWIndows
+    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcMoveTag]: # [tag, wid | 0, 0, 0, 0]
+      log $ev.data.l
+      let tag = ev.data.l[1] - 1
+      let client = block:
+        if ev.data.l[2] != 0:
+          let clientOpt = self.findClient do (client: Client) ->
+              bool: client.window == uint ev.data.l[2]
+          if clientOpt.isNone: return
+          clientOpt.get[1]
+        else:
+          if self.focused.isSome: 0 else: return
+      self.clients[client].tags = [false, false, false, false, false, false, false, false, false]
+      self.clients[client].tags[tag] = true
+      self.updateTagState
+      if self.layout == lyTiling: self.tileWindows
 
 proc handleConfigureNotify(self: var Wm; ev: XConfigureEvent): void =
   let clientOpt = self.findClient do (client: Client) -> bool: client.window == ev.window
@@ -759,6 +775,7 @@ proc handleExpose(self: var Wm; ev: XExposeEvent): void =
   discard self.dpy.XRaiseWindow client.frame.window
 
 proc handlePropertyNotify(self: var Wm; ev: XPropertyEvent): void =
+  log "PropertyNotify"
   let clientOpt = self.findClient do (client: Client) -> bool: client.window == ev.window
   if clientOpt.isNone: return
   let client = clientOpt.get[0]
