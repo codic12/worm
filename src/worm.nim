@@ -832,8 +832,8 @@ proc tileWindows(self: var Wm): void =
       # discard self.dpy.XResizeWindow(client.window, cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) - self.config.gaps, cuint (scrInfo[0].height div int16(clientLen - 1)) - int16(self.config.struts.bottom) - int16(self.config.borderWidth*2) - int16(self.config.frameHeight) - self.config.gaps) # bring the master window up to cover half the screen
 
 proc main: void =
-  if fileExists expandTilde "~/.config/worm/autostart":
-    discard startProcess expandTilde "~/.config/worm/autostart"
+  if fileExists expandTilde "~/.config/worm/rc":
+    discard startProcess expandTilde "~/.config/worm/rc"
   log "Starting Worm v0.2 (rewrite)"
   var wm = newWm()
   wm.eventLoop
