@@ -10,7 +10,7 @@ type
     lyFloating, lyTiling
   IpcAtom = enum
     IpcClientMessage, IpcBorderActivePixel, IpcBorderInactivePixel, IpcBorderWidth, IpcFramePixel,
-        IpcFrameHeight, IpcTextPixel, IpcTextFont, IpcTextOffset, IpcKillClient, IpcCloseClient, IpcSwitchTag, IpcLayout, IpcGaps, IpcMaster, IpcLast
+        IpcFrameHeight, IpcTextPixel, IpcTextFont, IpcTextOffset, IpcKillClient, IpcCloseClient, IpcSwitchTag, IpcLayout, IpcGaps, IpcMaster, IpcStruts, IpcLast
 
 func getIpcAtoms*(dpy: ptr Display): array[ord IpcLast, Atom] =
   [
@@ -29,6 +29,7 @@ func getIpcAtoms*(dpy: ptr Display): array[ord IpcLast, Atom] =
     dpy.XInternAtom("WORM_IPC_LAYOUT", false),
     dpy.XInternAtom("WORM_IPC_MASTER", false),
     dpy.XInternAtom("WORM_IPC_GAPS", false),
+    dpy.XInternAtom("WORM_IPC_STRUTS", false)
   ]
 
 proc main: void =
@@ -70,6 +71,7 @@ proc main: void =
       of "close-active-client": data = [clong ipcAtoms[ord IpcCloseClient], 0, 0, 0, 0]
       of "switch-tag": data = [clong ipcAtoms[ord IpcSwitchTag], clong params[i+1].parseInt, 0, 0, 0]
       of "layout": data = [clong ipcAtoms[ord IpcLayout], if params[i+1] == "floating": clong lyFloating elif params[i+1] == "tiling": clong lyTiling else: quit(1), 0, 0, 0]
+      of "struts": data = [clong ipcAtoms[ord IpcStruts], clong params[i+1].parseInt, clong params[i+2].parseInt, clong params[i+3].parseInt, clong params[i+4].parseInt]
       else: discard
       let event = XEvent(xclient: XClientMessageEvent(format: 32,
         theType: ClientMessage, serial: 0, sendEvent: true, display: dpy,

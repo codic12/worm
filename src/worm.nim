@@ -30,7 +30,7 @@ type
   IpcAtom = enum
     IpcClientMessage, IpcBorderActivePixel, IpcBorderInactivePixel,
         IpcBorderWidth, IpcFramePixel, IpcFrameHeight, IpcTextPixel, IpcTextFont, IpcTextOffset, IpcKillClient,
-            IpcCloseClient, IpcSwitchTag, IpcLayout, IpcGaps, IpcMaster, IpcLast
+            IpcCloseClient, IpcSwitchTag, IpcLayout, IpcGaps, IpcMaster, IpcStruts, IpcLast
             
   Geometry = object
     x, y: int
@@ -114,7 +114,7 @@ func getNetAtoms*(dpy: ptr Display): array[ord NetLast, Atom] =
     dpy.XInternAtom("_NET_DESKTOP_NAMES", false),
     dpy.XInternAtom("_NET_FRAME_EXTENTS", false)
   ]
-
+  
 func getIpcAtoms*(dpy: ptr Display): array[ord IpcLast, Atom] =
   [
     dpy.XInternAtom("WORM_IPC_CLIENT_MESSAGE", false),
@@ -132,6 +132,7 @@ func getIpcAtoms*(dpy: ptr Display): array[ord IpcLast, Atom] =
     dpy.XInternAtom("WORM_IPC_LAYOUT", false),
     dpy.XInternAtom("WORM_IPC_MASTER", false),
     dpy.XInternAtom("WORM_IPC_GAPS", false),
+    dpy.XInternAtom("WORM_IPC_STRUTS", false)
   ]
 
 func getProperty[T](
@@ -709,6 +710,14 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
           if self.focused.isSome: self.focused.get else: return
       # ...
       self.tileWindows
+    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcStruts]:
+      self.config.struts = (
+        top: uint ev.data.l[1],
+        bottom: uint ev.data.l[2],
+        left: uint ev.data.l[3],
+        right: uint ev.data.l[4]
+      )
+      if self.layout == lyTiling: self.tileWIndows
 
 proc handleConfigureNotify(self: var Wm; ev: XConfigureEvent): void =
   let clientOpt = self.findClient do (client: Client) -> bool: client.window == ev.window
@@ -806,7 +815,7 @@ proc tileWindows(self: var Wm): void =
       continue
     if clientLen == 2:
       discard self.dpy.XMoveWindow(client.frame.window, cint scrInfo[0].width shr 1 + self.config.gaps, cint self.config.struts.top)
-      discard self.dpy.XResizeWindow(client.window, cuint masterWidth, cuint scrInfo[0].height - self.config.struts.top.cint - self.config.struts.bottom.cint - self.config.frameHeight.cint - cint self.config.borderWidth*2)
+      discard self.dpy.XResizeWindow(client.window,cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) - self.config.gaps - self.config.struts.right.cint, cuint scrInfo[0].height - self.config.struts.top.cint - self.config.struts.bottom.cint - self.config.frameHeight.cint - cint self.config.borderWidth*2)
     else:
       let stackElem = i - int irrevelantLen - 1 # How many windows are there in the stack? We must subtract 1 to ignore the master window; which we iterate over too.
       let yGap = if stackElem != 0:
