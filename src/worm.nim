@@ -548,9 +548,9 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
       if uint(i) != clientOpt.get[1]: discard self.dpy.XSetWindowBorder(locClient.frame.window,
             self.config.borderInactivePixel)
   elif ev.messageType == self.netAtoms[ord NetCurrentDesktop]:
-    self.tags.switchTag uint8 ev.data.l[1]
+    self.tags.switchTag uint8 ev.data.l[0]
     self.updateTagState
-    let numdesk = [ev.data.l[1]]
+    let numdesk = [ev.data.l[0]]
     discard self.dpy.XChangeProperty(
       self.root,
       self.netAtoms[ord NetCurrentDesktop],
