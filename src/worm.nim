@@ -697,9 +697,10 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
       if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[ord IpcGaps]:
       self.config.gaps = int ev.data.l[1]
-      self.tileWindows
+      if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[ord IpcMaster]:
       # Get the index of the client, for swapping.
+      # this isn't actually done yet
       let newMasterIdx = block:
         if ev.data.l[1] != 0:
           let clientOpt = self.findClient do (client: Client) ->
