@@ -389,7 +389,8 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
   discard self.dpy.XSelectInput(frame, ExposureMask or SubstructureNotifyMask or
-      SubstructureRedirectMask or PropertyChangeMask)
+      SubstructureRedirectMask)
+  discard self.dpy.XSelectInput(ev.window, PropertyChangeMask)
   discard self.dpy.XReparentWindow(ev.window, frame, 0,
       cint self.config.frameHeight)
   let top = self.dpy.XCreateWindow(frame, 0, 0,
@@ -786,7 +787,6 @@ proc handleExpose(self: var Wm; ev: XExposeEvent): void =
   discard self.dpy.XRaiseWindow client.frame.window
 
 proc handlePropertyNotify(self: var Wm; ev: XPropertyEvent): void =
-  log "PropertyNotify"
   let clientOpt = self.findClient do (client: Client) -> bool: client.window == ev.window
   if clientOpt.isNone: return
   let client = clientOpt.get[0]
