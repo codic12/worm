@@ -161,7 +161,7 @@ func getProperty[T](
     addr d,
     cast[ptr ptr char](addr e)
   )
-  if c > 0: some e[] else: none T
+  if c > 0: return some e[] else: result.reset
 
 proc newWm: Wm
 proc eventLoop(self: var Wm): void
@@ -469,7 +469,7 @@ proc handleUnmapNotify(self: var Wm; ev: XUnmapEvent): void =
   self.clients.del clientOpt.get[1]
   self.updateClientList
   discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
-  self.focused = none uint # TODO: focus last window
+  self.focused.reset # TODO: focus last window
   if self.layout == lyTiling: self.tileWindows
 
 proc handleDestroyNotify(self: var Wm; ev: XDestroyWindowEvent): void =
@@ -480,7 +480,7 @@ proc handleDestroyNotify(self: var Wm; ev: XDestroyWindowEvent): void =
   self.clients.del clientOpt.get[1]
   self.updateClientList
   discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
-  self.focused = none uint # TODO: focus last window
+  self.focused.reset # TODO: focus last window
   if self.layout == lyTiling: self.tileWindows
 
 proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
