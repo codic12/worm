@@ -10,7 +10,7 @@ type
     lyFloating, lyTiling
   IpcAtom = enum
     IpcClientMessage, IpcBorderActivePixel, IpcBorderInactivePixel, IpcBorderWidth, IpcFramePixel,
-        IpcFrameHeight, IpcTextPixel, IpcTextFont, IpcTextOffset, IpcKillClient, IpcCloseClient, IpcSwitchTag, IpcLayout, IpcGaps, IpcMaster, IpcStruts, IpcMoveTag
+        IpcFrameHeight, IpcTextPixel, IpcTextFont, IpcTextOffset, IpcKillClient, IpcCloseClient, IpcSwitchTag, IpcLayout, IpcGaps, IpcMaster, IpcStruts, IpcMoveTag, IpcFloat
 
 func getIpcAtoms*(dpy: ptr Display): array[IpcAtom, Atom] =
   [
@@ -30,7 +30,8 @@ func getIpcAtoms*(dpy: ptr Display): array[IpcAtom, Atom] =
     dpy.XInternAtom("WORM_IPC_MASTER", false),
     dpy.XInternAtom("WORM_IPC_GAPS", false),
     dpy.XInternAtom("WORM_IPC_STRUTS", false),
-    dpy.XInternAtom("WORM_IPC_MOVE_TAG", false)
+    dpy.XInternAtom("WORM_IPC_MOVE_TAG", false),
+    dpy.XInternAtom("WORM_IPC_FLOAT", false)
   ]
 
 
@@ -78,6 +79,8 @@ proc main: void =
       of "move-active-tag": data = [clong ipcAtoms[IpcMoveTag], clong params[i+1].parseInt, 0, 0, 0]
       of "master": data = [clong ipcAtoms[IpcMaster], clong params[i+1].parseInt, 0, 0, 0]
       of "master-active": data = [clong ipcAtoms[IpcMaster], 0, 0, 0, 0]
+      of "float": data = [clong ipcAtoms[IpcFloat], clong params[i+1].parseInt, 0, 0, 0]
+      of "float-active": data = [clong ipcAtoms[IpcFloat], 0, 0, 0, 0]
       else: discard
       let event = XEvent(xclient: XClientMessageEvent(format: 32,
         theType: ClientMessage, serial: 0, sendEvent: true, display: dpy,

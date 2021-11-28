@@ -29,7 +29,7 @@ type
   IpcAtom = enum
     IpcClientMessage, IpcBorderActivePixel, IpcBorderInactivePixel,
         IpcBorderWidth, IpcFramePixel, IpcFrameHeight, IpcTextPixel, IpcTextFont, IpcTextOffset, IpcKillClient,
-            IpcCloseClient, IpcSwitchTag, IpcLayout, IpcGaps, IpcMaster, IpcStruts, IpcMoveTag
+            IpcCloseClient, IpcSwitchTag, IpcLayout, IpcGaps, IpcMaster, IpcStruts, IpcMoveTag, IpcFloat
 
   Geometry = object
     x, y: int
@@ -133,7 +133,8 @@ func getIpcAtoms*(dpy: ptr Display): array[IpcAtom, Atom] =
     dpy.XInternAtom("WORM_IPC_MASTER", false),
     dpy.XInternAtom("WORM_IPC_GAPS", false),
     dpy.XInternAtom("WORM_IPC_STRUTS", false),
-    dpy.XInternAtom("WORM_IPC_MOVE_TAG", false)
+    dpy.XInternAtom("WORM_IPC_MOVE_TAG", false),
+    dpy.XInternAtom("WORM_IPC_FLOAT", false)
   ]
 
 func getProperty[T](
@@ -434,7 +435,7 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
       discard self.dpy.XGrabButton(button, mask, top, true, ButtonPressMask or
         PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None)
   self.clients.add Client(window: ev.window, frame: Frame(window: frame,
-      top: top), draw: draw, color: color, title: $title, tags: self.tags)
+      top: top), draw: draw, color: color, title: $title, tags: self.tags, floating: self.layout == lyFloating)
   self.updateClientList
   let extents = [self.config.borderWidth, self.config.borderWidth,
       self.config.borderWidth+self.config.frameHeight, self.config.borderWidth]
@@ -698,6 +699,8 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
       # We recieve this IPC event when a client such as wormc wishes to change the layout (eg, floating -> tiling)
       if ev.data.l[1] notin {0, 1}: return
       self.layout = Layout ev.data.l[1]
+      for i, _ in self.clients:
+        self.clients[i].floating = bool ev.data.l[1]
       if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[IpcGaps]:
       self.config.gaps = int ev.data.l[1]
@@ -748,6 +751,17 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
       self.clients[client].tags = [false, false, false, false, false, false, false, false, false]
       self.clients[client].tags[tag] = true
       self.updateTagState
+      if self.layout == lyTiling: self.tileWindows
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcFloat]:
+      let client = block:
+        if ev.data.l[1] != 0:
+          let clientOpt = self.findClient do (client: Client) ->
+              bool: client.window == uint ev.data.l[1]
+          if clientOpt.isNone: return
+          clientOpt.get[1]
+        else:
+          if self.focused.isSome: self.focused.get else: return
+      self.clients[client].floating = true
       if self.layout == lyTiling: self.tileWindows
 
 proc handleConfigureNotify(self: var Wm; ev: XConfigureEvent): void =
@@ -823,7 +837,7 @@ proc tileWindows(self: var Wm): void =
   var clientLen: uint = 0
   var master: ptr Client = nil
   for i, client in self.clients:
-    if client.tags == self.tags: # We only care about clients on the current tag.
+    if client.tags == self.tags and not client.floating: # We only care about clients on the current tag.
       if master == nil: # This must be the first client on the tag, otherwise master would not be nil; therefore, we promote it to master.
         master = addr self.clients[i]
       inc clientLen
@@ -842,7 +856,7 @@ proc tileWindows(self: var Wm): void =
   # discard self.dpy.XResizeWindow(master.window, cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) - self.config.gaps*2 - int16 self.config.struts.right, cuint scrInfo[0].height - int16(self.config.borderWidth*2) - int16(self.config.frameHeight) - int16(self.config.struts.top) - int16(self.config.struts.bottom)) # bring the master window up to cover half the screen
   var irrevelantLen: uint = 0
   for i, client in self.clients:
-    if client.tags != self.tags or client == master[]:
+    if client.tags != self.tags or client == master[] or client.floating:
       inc irrevelantLen
       continue
     if clientLen == 2:

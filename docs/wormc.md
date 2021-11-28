@@ -58,3 +58,7 @@ Like move-tag, but uses the focused window. Eg `wormc move-active-tag 5`
 In a tiling layout, sets the master of the current workspace to the given window ID. Ex `wormc master 123456789`
 ### `master-active()`
 Like `master`, but uses the active client. Example: `wormc master-active`
+### `float(window id)`
+Change the mode of the client indicated by the provided window ID to floating. In a tiling layout, this would indicate that the provided window should not be tiled. TODO: have a way to reverse this affect. As an example: `wormc float 1234567890`
+### `float-active()`
+Like float, but floats the active client; eg `wormc float-active`.
