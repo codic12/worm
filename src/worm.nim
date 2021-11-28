@@ -47,6 +47,7 @@ type
     title: string
     beforeGeom: Option[Geometry] # Previous geometry *of the frame* pre-fullscreen.
     fullscreen: bool # Whether this client is currently fullscreened or not (EWMH, or otherwise ig)
+    floating: bool # If tiling is on, whether this window is currently floating or not. If it's floating it won't be included in the tiling.
     tags: TagSet
   Config = object
     borderActivePixel, borderInactivePixel, borderWidth: uint
@@ -560,7 +561,8 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
       PropModeReplace,
       cast[cstring](unsafeAddr numdesk),
       1
-    ) 
+    )
+    if self.layout == lyTiling: self.tileWindows
   elif ev.messageType == self.ipcAtoms[IpcClientMessage]: # Register events from our IPC-based event system
     if ev.format != 32: return # check we can access the union member
     if ev.data.l[0] == clong self.ipcAtoms[IpcBorderInactivePixel]:
@@ -691,6 +693,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         cast[cstring](unsafeAddr numdesk),
         1
       )
+      if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[IpcLayout]:
       # We recieve this IPC event when a client such as wormc wishes to change the layout (eg, floating -> tiling)
       if ev.data.l[1] notin {0, 1}: return
