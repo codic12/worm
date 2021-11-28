@@ -731,7 +731,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         left: uint ev.data.l[3],
         right: uint ev.data.l[4]
       )
-      if self.layout == lyTiling: self.tileWIndows
+      if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[ord IpcMoveTag]: # [tag, wid | 0, 0, 0, 0]
       log $ev.data.l
       let tag = ev.data.l[1] - 1
