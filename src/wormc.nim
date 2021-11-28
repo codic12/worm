@@ -76,6 +76,8 @@ proc main: void =
       of "struts": data = [clong ipcAtoms[ord IpcStruts], clong params[i+1].parseInt, clong params[i+2].parseInt, clong params[i+3].parseInt, clong params[i+4].parseInt]
       of "move-tag": data = [clong ipcAtoms[ord IpcMoveTag], clong params[i+1].parseInt, clong params[i+2].parseInt, 0, 0]
       of "move-active-tag": data = [clong ipcAtoms[ord IpcMoveTag], clong params[i+1].parseInt, 0, 0, 0]
+      of "master": data = [clong ipcAtoms[ord IpcMaster], clong params[i+1].parseInt, 0, 0, 0]
+      of "master-active": data = [clong ipcAtoms[ord IpcMaster], 0, 0, 0, 0]
       else: discard
       let event = XEvent(xclient: XClientMessageEvent(format: 32,
         theType: ClientMessage, serial: 0, sendEvent: true, display: dpy,

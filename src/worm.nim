@@ -710,7 +710,18 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
           clientOpt.get[1]
         else:
           if self.focused.isSome: self.focused.get else: return
-      # ...
+      var
+        currMasterOpt: Option[Client] = none Client
+        currMasterIdx: uint = 0
+      for i, client in self.clients:
+        if client.tags == self.tags: # We only care about clients on the current tag.
+          if currMasterOpt.isNone: # This must be the first client on the tag, otherwise master would not be nil; therefore, we promote it to master.
+            currMasterOpt = some self.clients[i]
+            currMasterIdx = uint i
+      if currMasterOpt.isNone: return
+      let currMaster = currMasterOpt.get
+      self.clients[currMasterIdx] = self.clients[newMasterIdx]
+      self.clients[newMasterIdx] = currMaster
       if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[ord IpcStruts]:
       self.config.struts = (
@@ -814,6 +825,7 @@ proc tileWindows(self: var Wm): void =
       if master == nil: # This must be the first client on the tag, otherwise master would not be nil; therefore, we promote it to master.
         master = addr self.clients[i]
       inc clientLen
+  if master == nil: return
   if clientLen == 0: return # we got nothing to tile.
   var scrNo: cint
   var scrInfo = cast[ptr UncheckedArray[XineramaScreenInfo]](self.dpy.XineramaQueryScreens(addr scrNo))
