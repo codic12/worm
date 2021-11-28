@@ -25,13 +25,12 @@ type
         NetWMWindowTypeTooltip,
     NetWMWindowTypeNotification, NetWMWindowTypeDock,
     NetWMDesktop, NetDesktopViewport, NetNumberOfDesktops, NetCurrentDesktop,
-        NetDesktopNames, NetFrameExtents,
-    NetLast
+        NetDesktopNames, NetFrameExtents
   IpcAtom = enum
     IpcClientMessage, IpcBorderActivePixel, IpcBorderInactivePixel,
         IpcBorderWidth, IpcFramePixel, IpcFrameHeight, IpcTextPixel, IpcTextFont, IpcTextOffset, IpcKillClient,
-            IpcCloseClient, IpcSwitchTag, IpcLayout, IpcGaps, IpcMaster, IpcStruts, IpcMoveTag, IpcLast
-            
+            IpcCloseClient, IpcSwitchTag, IpcLayout, IpcGaps, IpcMaster, IpcStruts, IpcMoveTag
+
   Geometry = object
     x, y: int
     width, height: uint
@@ -64,8 +63,8 @@ type
     currEv: XEvent
     clients: seq[Client]
     font: ptr XftFont
-    netAtoms: array[ord NetLast, Atom]
-    ipcAtoms: array[ord IpcLast, Atom]
+    netAtoms: array[NetAtom, Atom]
+    ipcAtoms: array[IpcAtom, Atom]
     config: Config
     focused: Option[uint]
     tags: TagSet
@@ -78,7 +77,7 @@ proc switchTag(self: var TagSet; tag: uint8): void =
   for i, _ in self: self[i] = false
   self[tag] = true
 
-func getNetAtoms*(dpy: ptr Display): array[ord NetLast, Atom] =
+func getNetAtoms*(dpy: ptr Display): array[NetAtom, Atom] =
   [
     dpy.XInternAtom("_NET_ACTIVE_WINDOW", false),
     dpy.XInternAtom("_NET_SUPPORTED", false),
@@ -115,7 +114,7 @@ func getNetAtoms*(dpy: ptr Display): array[ord NetLast, Atom] =
     dpy.XInternAtom("_NET_FRAME_EXTENTS", false)
   ]
   
-func getIpcAtoms*(dpy: ptr Display): array[ord IpcLast, Atom] =
+func getIpcAtoms*(dpy: ptr Display): array[IpcAtom, Atom] =
   [
     dpy.XInternAtom("WORM_IPC_CLIENT_MESSAGE", false),
     dpy.XInternAtom("WORM_IPC_BORDER_ACTIVE_PIXEL", false),
@@ -202,7 +201,7 @@ proc newWm: Wm =
   let netAtoms = getNetAtoms dpy
   discard dpy.XChangeProperty(
     root,
-    netAtoms[ord NetSupportingWMCheck],
+    netAtoms[NetSupportingWMCheck],
     XaWindow,
     32,
     PropModeReplace,
@@ -211,17 +210,17 @@ proc newWm: Wm =
   )
   discard dpy.XChangeProperty(
     root,
-    netAtoms[ord NetSupported],
+    netAtoms[NetSupported],
     XaAtom,
     32,
     PropModeReplace,
     cast[cstring](unsafeAddr netAtoms),
-    ord(NetLast)
+    netAtoms.len.cint
   )
-  let wmname: cstring = "worm"
+  let wmname = "worm".cstring
   discard dpy.XChangeProperty(
     root,
-    netAtoms[ord NetWMName],
+    netAtoms[NetWMName],
     dpy.XInternAtom("UTF8_STRING", false),
     8,
     PropModeReplace,
@@ -231,7 +230,7 @@ proc newWm: Wm =
   var numdesk = [9]
   discard dpy.XChangeProperty(
     root,
-    netAtoms[ord NetNumberOfDesktops],
+    netAtoms[NetNumberOfDesktops],
     XaCardinal,
     32,
     PropModeReplace,
@@ -241,7 +240,7 @@ proc newWm: Wm =
   numdesk = [0]
   discard dpy.XChangeProperty(
     root,
-    netAtoms[ord NetCurrentDesktop],
+    netAtoms[NetCurrentDesktop],
     XaCardinal,
     32,
     PropModeReplace,
@@ -250,7 +249,7 @@ proc newWm: Wm =
   )
   discard dpy.XChangeProperty(
     root,
-    netAtoms[ord NetClientList],
+    netAtoms[NetClientList],
     XaWindow,
     32,
     PropModeReplace,
@@ -373,12 +372,12 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
   discard self.dpy.XGetWindowAttributes(ev.window, addr attr)
   if attr.overrideRedirect: return
   let wintype = getProperty[Atom](self.dpy, ev.window, self.netAtoms[
-      ord NetWMWindowType])
+      NetWMWindowType])
   if wintype.isSome and wintype.get in {self.netAtoms[
-      ord NetWMWindowTypeDock], self.netAtoms[ord NetWMWindowTypeDropdownMenu],
-          self.netAtoms[ord NetWMWindowTypePopupMenu], self.netAtoms[
-          ord NetWMWindowTypeTooltip], self.netAtoms[
-          ord NetWMWindowTypeNotification]}:
+      NetWMWindowTypeDock], self.netAtoms[NetWMWindowTypeDropdownMenu],
+          self.netAtoms[NetWMWindowTypePopupMenu], self.netAtoms[
+          NetWMWindowTypeTooltip], self.netAtoms[
+          NetWMWindowTypeNotification]}:
     discard self.dpy.XMapWindow ev.window
     return # Don't manage irregular windows
   var frameAttr = XSetWindowAttributes(backgroundPixel: culong self.config.framePixel,
@@ -408,7 +407,7 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
     var nr: culong
     var bar: culong
     var prop_return: ptr char
-    discard self.dpy.XGetWindowProperty(ev.window, self.netAtoms[ord NetWMName],
+    discard self.dpy.XGetWindowProperty(ev.window, self.netAtoms[NetWMName],
         0, high clong, false, self.dpy.XInternAtom("UTF8_STRING", false),
         addr atr, addr afr, addr nr, addr bar, addr prop_return)
     if prop_return == nil: discard self.dpy.XFetchName(ev.window, cast[
@@ -440,7 +439,7 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
       self.config.borderWidth+self.config.frameHeight, self.config.borderWidth]
   discard self.dpy.XChangeProperty(
     ev.window,
-    self.netAtoms[ord NetFrameExtents],
+    self.netAtoms[NetFrameExtents],
     XaCardinal,
     32,
     PropModeReplace,
@@ -485,14 +484,14 @@ proc handleDestroyNotify(self: var Wm; ev: XDestroyWindowEvent): void =
   if self.layout == lyTiling: self.tileWindows
 
 proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
-  if ev.messageType == self.netAtoms[ord NetWMState]:
+  if ev.messageType == self.netAtoms[NetWMState]:
     let clientOpt = self.findClient do (client: Client) ->
         bool: client.window == ev.window
     if clientOpt.isNone: return
     let client = clientOpt.get[0]
     if ev.format != 32: return # check we can access the union member
-    if (ev.data.l[1] == int self.netAtoms[ord NetWMStateFullScreen]) or (
-        ev.data.l[2] == int self.netAtoms[ord NetWMStateFullScreen]):
+    if (ev.data.l[1] == int self.netAtoms[NetWMStateFullScreen]) or (
+        ev.data.l[2] == int self.netAtoms[NetWMStateFullScreen]):
       if ev.data.l[0] == 1 and not client.fullscreen: # Client is asking to be fullscreened
         log "Fullscreening client"
         var attr: XWindowAttributes
@@ -509,10 +508,10 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
             0].height) # TODO : we need to handle multi-monitor properly here, or else...
           discard self.dpy.XRaiseWindow window
         discard self.dpy.XSetInputFocus(client.window, RevertToPointerRoot, CurrentTime)
-        var arr = [self.netAtoms[ord NetWMStateFullScreen]]
+        var arr = [self.netAtoms[NetWMStateFullScreen]]
         # change the property
         discard self.dpy.XChangeProperty(client.window, self.netAtoms[
-            ord NetWMState], XaAtom, 32, PropModeReplace, cast[cstring](
+            NetWMState], XaAtom, 32, PropModeReplace, cast[cstring](
                 addr arr), 1)
         client.fullscreen = true
       elif ev.data.l[0] == 0 and client.fullscreen:
@@ -527,7 +526,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
             cuint client.beforeGeom.get.width,
             cuint client.beforeGeom.get.height - self.config.frameHeight)
         discard self.dpy.XChangeProperty(client.window, self.netAtoms[
-            ord NetWMState], XaAtom, 32, PropModeReplace, cast[cstring]([]), 0)
+            NetWMState], XaAtom, 32, PropModeReplace, cast[cstring]([]), 0)
         discard self.dpy.XClearWindow client.frame.window
         client.draw.XftDrawStringUtf8(addr client.color, self.font,
           cint self.config.textOffset.x, cint self.config.textOffset.y,
@@ -535,7 +534,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
           ptr char](cstring client.title), cint client.title.len)
         discard self.dpy.XSetWindowBorderWidth(client.frame.window,
             cuint self.config.borderWidth)
-  elif ev.messageType == self.netAtoms[ord NetActiveWindow]:
+  elif ev.messageType == self.netAtoms[NetActiveWindow]:
     if ev.format != 32: return
     let clientOpt = self.findClient do (client: Client) ->
         bool: client.window == ev.window
@@ -549,34 +548,34 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
     for i, locClient in self.clients:
       if uint(i) != clientOpt.get[1]: discard self.dpy.XSetWindowBorder(locClient.frame.window,
             self.config.borderInactivePixel)
-  elif ev.messageType == self.netAtoms[ord NetCurrentDesktop]:
+  elif ev.messageType == self.netAtoms[NetCurrentDesktop]:
     self.tags.switchTag uint8 ev.data.l[0]
     self.updateTagState
     let numdesk = [ev.data.l[0]]
     discard self.dpy.XChangeProperty(
       self.root,
-      self.netAtoms[ord NetCurrentDesktop],
+      self.netAtoms[NetCurrentDesktop],
       XaCardinal,
       32,
       PropModeReplace,
       cast[cstring](unsafeAddr numdesk),
       1
     ) 
-  elif ev.messageType == self.ipcAtoms[ord IpcClientMessage]: # Register events from our IPC-based event system
+  elif ev.messageType == self.ipcAtoms[IpcClientMessage]: # Register events from our IPC-based event system
     if ev.format != 32: return # check we can access the union member
-    if ev.data.l[0] == clong self.ipcAtoms[ord IpcBorderInactivePixel]:
+    if ev.data.l[0] == clong self.ipcAtoms[IpcBorderInactivePixel]:
       log "Changing inactive border pixel to " & $ev.data.l[1]
       self.config.borderInactivePixel = uint ev.data.l[1]
       for i, client in self.clients:
         if (self.focused.isSome and uint(i) != self.focused.get) or
             self.focused.isNone: discard self.dpy.XSetWindowBorder(
             client.frame.window, self.config.borderInactivePixel)
-    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcBorderActivePixel]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcBorderActivePixel]:
       log "Changing active border pixel to " & $ev.data.l[1]
       self.config.borderActivePixel = uint ev.data.l[1]
       if self.focused.isSome: discard self.dpy.XSetWindowBorder(self.clients[
           self.focused.get].frame.window, self.config.borderActivePixel)
-    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcBorderWidth]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcBorderWidth]:
       log "Changing border width to " & $ev.data.l[1]
       self.config.borderWidth = uint ev.data.l[1]
       for client in self.clients:
@@ -592,21 +591,21 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         self.config.borderWidth]
         discard self.dpy.XChangeProperty(
           client.window,
-          self.netAtoms[ord NetFrameExtents],
+          self.netAtoms[NetFrameExtents],
           XaCardinal,
           32,
           PropModeReplace,
           cast[cstring](unsafeAddr extents),
           4
         )
-    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcFramePixel]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcFramePixel]:
       log "Changing frame pixel to " & $ev.data.l[1]
       self.config.framePixel = uint ev.data.l[1]
       for client in self.clients:
         for window in [client.frame.window,
             client.frame.top]: discard self.dpy.XSetWindowBackground(window,
             cuint self.config.framePixel)
-    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcFrameHeight]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcFrameHeight]:
       log "Changing frame height to " & $ev.data.l[1]
       self.config.frameHeight = uint ev.data.l[1]
       for client in self.clients:
@@ -623,14 +622,14 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         self.config.borderWidth]
         discard self.dpy.XChangeProperty(
           client.window,
-          self.netAtoms[ord NetFrameExtents],
+          self.netAtoms[NetFrameExtents],
           XaCardinal,
           32,
           PropModeReplace,
           cast[cstring](unsafeAddr extents),
           4
         )
-    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcTextPixel]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcTextPixel]:
       log "Chaging text pixel to " & $ev.data.l[1]
       self.config.textPixel = uint ev.data.l[1]
       for client in mitems self.clients:
@@ -643,12 +642,12 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         discard self.dpy.XClearWindow client.frame.top
         client.draw.XftDrawStringUtf8(addr client.color, self.font,
             cint self.config.textOffset.x, cint self.config.textOffset.y, cast[ptr char](cstring client.title), cint client.title.len)
-    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcTextFont]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcTextFont]:
       var fontProp: XTextProperty
       var fontList: ptr UncheckedArray[cstring]
       var n: cint
       discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
-          ord IpcTextFont])
+          IpcTextFont])
       let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
           ptr ptr cstring](addr fontList), addr n)
       log "Changing text font to " & $fontList[0]
@@ -656,7 +655,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
       if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
-    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcTextOffset]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcTextOffset]:
       log "Changing text offset to (x: " & $ev.data.l[1] & ", y: " & $ev.data.l[
           2] & ")"
       self.config.textOffset = (x: uint ev.data.l[1], y: uint ev.data.l[2])
@@ -665,11 +664,11 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         client.draw.XftDrawStringUtf8(unsafeAddr client.color, self.font,
             cint self.config.textOffset.x, cint self.config.textOffset.y, cast[
             ptr char](cstring client.title), cint client.title.len)
-    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcKillClient]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcKillClient]:
       let window = if ev.data.l[1] == 0: self.clients[
           if self.focused.isSome: self.focused.get else: return].window else: Window ev.data.l[1]
       discard self.dpy.XKillClient window
-    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcCloseClient]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcCloseClient]:
       let window = if ev.data.l[1] == 0: self.clients[
           if self.focused.isSome: self.focused.get else: return].window else: Window ev.data.l[1]
       let cm = XEvent(xclient: XClientMessageEvent(format: 32,
@@ -679,28 +678,28 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         data: XClientMessageData(l: [clong self.dpy.XInternAtom(
             "WM_DELETE_WINDOW", false), CurrentTime, 0, 0, 0])))
       discard self.dpy.XSendEvent(window, false, NoEventMask, cast[ptr XEvent](unsafeAddr cm))
-    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcSwitchTag]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcSwitchTag]:
       self.tags.switchTag uint8 ev.data.l[1] - 1
       self.updateTagState
       let numdesk = [ev.data.l[1] - 1]
       discard self.dpy.XChangeProperty(
         self.root,
-        self.netAtoms[ord NetCurrentDesktop],
+        self.netAtoms[NetCurrentDesktop],
         XaCardinal,
         32,
         PropModeReplace,
         cast[cstring](unsafeAddr numdesk),
         1
       )
-    elif ev.data.l[0] == clong self.ipcAtoms[
-        ord IpcLayout]: # We recieve this IPC event when a client such as wormc wishes to change the layout (eg, floating -> tiling)
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcLayout]:
+      # We recieve this IPC event when a client such as wormc wishes to change the layout (eg, floating -> tiling)
       if ev.data.l[1] notin {0, 1}: return
       self.layout = Layout ev.data.l[1]
       if self.layout == lyTiling: self.tileWindows
-    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcGaps]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcGaps]:
       self.config.gaps = int ev.data.l[1]
       if self.layout == lyTiling: self.tileWindows
-    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcMaster]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMaster]:
       # Get the index of the client, for swapping.
       # this isn't actually done yet
       let newMasterIdx = block:
@@ -724,7 +723,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
       self.clients[currMasterIdx] = self.clients[newMasterIdx]
       self.clients[newMasterIdx] = currMaster
       if self.layout == lyTiling: self.tileWindows
-    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcStruts]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcStruts]:
       self.config.struts = (
         top: uint ev.data.l[1],
         bottom: uint ev.data.l[2],
@@ -732,7 +731,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         right: uint ev.data.l[4]
       )
       if self.layout == lyTiling: self.tileWindows
-    elif ev.data.l[0] == clong self.ipcAtoms[ord IpcMoveTag]: # [tag, wid | 0, 0, 0, 0]
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMoveTag]: # [tag, wid | 0, 0, 0, 0]
       log $ev.data.l
       let tag = ev.data.l[1] - 1
       let client = block:
@@ -771,7 +770,7 @@ proc updateClientList(self: Wm): void =
   if wins.len == 0: return
   discard self.dpy.XChangeProperty(
     self.root,
-    self.netAtoms[ord NetClientList],
+    self.netAtoms[NetClientList],
     XaWindow,
     32,
     PropModeReplace,
@@ -796,7 +795,7 @@ proc handlePropertyNotify(self: var Wm; ev: XPropertyEvent): void =
     var nr: culong
     var bar: culong
     var prop_return: ptr char
-    discard self.dpy.XGetWindowProperty(ev.window, self.netAtoms[ord NetWMName],
+    discard self.dpy.XGetWindowProperty(ev.window, self.netAtoms[NetWMName],
         0, high clong, false, self.dpy.XInternAtom("UTF8_STRING", false),
         addr atr, addr afr, addr nr, addr bar, addr prop_return)
     if prop_return == nil: discard self.dpy.XFetchName(ev.window, cast[
