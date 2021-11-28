@@ -742,7 +742,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
           if clientOpt.isNone: return
           clientOpt.get[1]
         else:
-          if self.focused.isSome: 0 else: return
+          if self.focused.isSome: self.focused.get else: return
       self.clients[client].tags = [false, false, false, false, false, false, false, false, false]
       self.clients[client].tags[tag] = true
       self.updateTagState
