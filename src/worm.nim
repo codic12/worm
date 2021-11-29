@@ -70,7 +70,6 @@ type
     focused: Option[uint]
     tags: TagSet
     layout: Layout
-    justMotion: uint
 
 proc defaultTagSet(): TagSet = [true, false, false, false, false, false, false,
     false, false]
@@ -363,7 +362,6 @@ proc handleMotionNotify(self: var Wm; ev: XMotionEvent): void =
   discard self.dpy.XResizeWindow(client.frame.top, 1.max(
       motionInfo.attr.width + (if motionInfo.start.button ==
       3: xdiff else: 0)).cuint, cuint self.config.frameHeight)
-  inc self.justMotion
   # if motionInfo.attr.y + (if motionInfo.start.button == 1: ydiff else: 0) <= 0: # snapping which doesn't really work properly
   #   var scrNo: cint
   #   var scrInfo = cast[ptr UncheckedArray[XineramaScreenInfo]](self.dpy.XineramaQueryScreens(addr scrNo))
@@ -768,9 +766,6 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
       if self.layout == lyTiling: self.tileWindows
 
 proc handleConfigureNotify(self: var Wm; ev: XConfigureEvent): void =
-  if self.justMotion > 0:
-    dec self.justMotion
-    return
   let clientOpt = self.findClient do (client: Client) -> bool: client.window == ev.window
   if clientOpt.isNone: return
   let client = clientOpt.get[0]
