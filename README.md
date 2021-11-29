@@ -1,4 +1,4 @@
-<p align="center"><img src=logo.svg></p>
+<img src=logo.svg align=right>
 
 # worm
 Worm is a tiny, dynamic, tag-based window manager written in the Nim language.
