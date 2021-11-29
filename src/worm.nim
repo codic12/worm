@@ -852,7 +852,8 @@ proc tileWindows(self: var Wm): void =
     uint scrInfo[0].width - self.config.struts.left.cint - self.config.struts.right.cint - cint self.config.borderWidth*2
   else:
     uint scrInfo[0].width shr 1 - self.config.struts.left.cint - cint self.config.borderWidth*2
-  discard self.dpy.XMoveWindow(master.frame.window, cint self.config.struts.left, cint self.config.struts.top)
+  log $masterWidth
+  discard self.dpy.XMoveResizeWindow(master.frame.window, cint self.config.struts.left, cint self.config.struts.top, cuint masterWidth + self.config.borderWidth * 2, cuint scrInfo[0].height - self.config.struts.top.int16 - self.config.struts.bottom.int16)
   discard self.dpy.XResizeWindow(master.window, cuint masterWidth, cuint scrInfo[0].height - self.config.struts.top.cint - self.config.struts.bottom.cint - self.config.frameHeight.cint  - cint self.config.borderWidth*2)
   # discard self.dpy.XMoveResizeWindow(master.frame.window, cint self.config.struts.left, cint self.config.struts.top, cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth * 2) - self.config.gaps*2 - int16 self.config.struts.right, cuint scrInfo[0].height - int16(self.config.borderWidth * 2) - int16(self.config.struts.top) - int16(self.config.struts.bottom)) # bring the master window up to cover half the screen
   # discard self.dpy.XResizeWindow(master.window, cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) - self.config.gaps*2 - int16 self.config.struts.right, cuint scrInfo[0].height - int16(self.config.borderWidth*2) - int16(self.config.frameHeight) - int16(self.config.struts.top) - int16(self.config.struts.bottom)) # bring the master window up to cover half the screen
