@@ -772,7 +772,7 @@ proc handleConfigureNotify(self: var Wm; ev: XConfigureEvent): void =
   if not client.fullscreen: # and not (ev.x == 0 and ev.y == cint self.config.frameHeight):
     discard self.dpy.XResizeWindow(client.frame.window, cuint ev.width,
         cuint ev.height + cint self.config.frameHeight)
-    discard self.dpy.XMoveWindow(client.frame.window, 0, cint self.config.frameHeight)
+    discard self.dpy.XMoveWindow(client.window, 0, cint self.config.frameHeight)
   # if self.layout == lyTiling: self.tileWindows
 
 func findClient(self: var Wm; predicate: proc(client: Client): bool): Option[(
