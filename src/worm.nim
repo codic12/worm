@@ -700,7 +700,8 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
       if ev.data.l[1] notin {0, 1}: return
       self.layout = Layout ev.data.l[1]
       for i, _ in self.clients:
-        self.clients[i].floating = bool ev.data.l[1]
+        self.clients[i].floating = self.layout == lyFloating
+      log $self.clients
       if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[IpcGaps]:
       self.config.gaps = int ev.data.l[1]
@@ -837,6 +838,7 @@ proc tileWindows(self: var Wm): void =
   var clientLen: uint = 0
   var master: ptr Client = nil
   for i, client in self.clients:
+    log $client.floating
     if client.tags == self.tags and not client.floating: # We only care about clients on the current tag.
       if master == nil: # This must be the first client on the tag, otherwise master would not be nil; therefore, we promote it to master.
         master = addr self.clients[i]
