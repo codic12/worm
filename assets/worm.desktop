@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Worm
-Comment=A floating, tag-based window manager written in Rust
+Comment=A floating, tag-based window manager written in Nim
 Exec=worm
 DesktopNames=Worm
 Type=Application
