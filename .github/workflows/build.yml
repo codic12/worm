@@ -1,0 +1,18 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        nim: [ '1.4.8', 'stable', 'devel' ]
+    name: Nim ${{ matrix.nim }} worm build
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup nim
+        uses: jiro4989/setup-nim-action@v1
+        with:
+          nim-version: ${{ matrix.nim }}
+      - run: nimble -y build -d:release --gc:arc

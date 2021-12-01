@@ -30,7 +30,7 @@ Simply create it as a shell-script to execute your favorite applications with
 worm.
 (don't forget to make it executable).
 
-An example can be found [here](examples/rc).
+An example can be found [here](/examples/rc).
 
 ### keybindings
 
@@ -39,7 +39,7 @@ Worm does not have a built-in keyboard mapper, so you should use something like
 Please read [the doc](docs/wormc.md) to understand how wormc works before
 writing your own sxhkdrc.
 
-An example sxhkdrc can be found [here](examples/sxhkdrc).
+An example sxhkdrc can be found [here](/examples/sxhkdrc).
 
 ## license
 
