@@ -11,8 +11,8 @@ exec sxhkd -c ~/.config/worm/sxhkdrc &
 wormc border-width 6
 
 # These add support for pywal
-# wormc active-border-pixel $((16$(sed -n '4p' .cache/wal/colors)))
-# wormc inactive-border-pixel $((16$(sed -n '5p' .cache/wal/colors)))
+# wormc border-active-pixel $((16$(sed -n '4p' .cache/wal/colors)))
+# wormc border-inactive-pixel $((16$(sed -n '5p' .cache/wal/colors)))
 # wormc background-pixel $((16$(sed -n '6p' .cache/wal/colors)))
 
 wormc layout tiling
