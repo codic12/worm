@@ -2,8 +2,9 @@
 # License: MIT
 
 import std/[options, sequtils, strutils, osproc, os]
-import x11/[xlib, x, xft, xinerama, xatom, xutil]
+import x11/[xlib, x, xft, xinerama, xatom, xutil, xrender]
 import log
+import atoms
 
 converter toXBool(x: bool): XBool = x.XBool
 converter toBool(x: XBool): bool = x.bool
@@ -11,26 +12,8 @@ converter toBool(x: XBool): bool = x.bool
 type
   Layout = enum
     lyFloating, lyTiling
-  NetAtom = enum
-    NetActiveWindow, NetSupported,
-    NetSystemTray, NetSystemTrayOP, NetSystemTrayOrientation,
-        NetSystemTrayOrientationHorz,
-    NetWMName, NetWMState, NetWMStateAbove, NetWMStateSticky, NetWMStateModal,
-    NetSupportingWMCheck, NetWMStateFullScreen, NetClientList,
-        NetWMStrutPartial,
-    NetWMWindowType, NetWMWindowTypeNormal, NetWMWindowTypeDialog,
-        NetWMWindowTypeUtility,
-    NetWMWindowTypeToolbar, NetWMWindowTypeSplash, NetWMWindowTypeMenu,
-    NetWMWindowTypeDropdownMenu, NetWMWindowTypePopupMenu,
-        NetWMWindowTypeTooltip,
-    NetWMWindowTypeNotification, NetWMWindowTypeDock,
-    NetWMDesktop, NetDesktopViewport, NetNumberOfDesktops, NetCurrentDesktop,
-        NetDesktopNames, NetFrameExtents
-  IpcAtom = enum
-    IpcClientMessage, IpcBorderActivePixel, IpcBorderInactivePixel,
-        IpcBorderWidth, IpcFramePixel, IpcFrameHeight, IpcTextPixel, IpcTextFont, IpcTextOffset, IpcKillClient,
-            IpcCloseClient, IpcSwitchTag, IpcLayout, IpcGaps, IpcMaster, IpcStruts, IpcMoveTag, IpcFloat
-
+  FramePart = enum
+    fpTitle, fpClose
   Geometry = object
     x, y: int
     width, height: uint
@@ -38,7 +21,7 @@ type
     start: XButtonEvent
     attr: XWindowAttributes
   Frame = object
-    window, top: Window
+    window, top, close, title: Window
   Client = object
     window: Window
     frame: Frame
@@ -53,9 +36,10 @@ type
     borderActivePixel, borderInactivePixel, borderWidth: uint
     framePixel, frameHeight: uint
     textPixel: uint
-    textOffset: tuple[x, y: uint]
+    textOffset, buttonOffset: tuple[x, y: uint]
     gaps: int # TODO: fix the type errors and change this to unsigned integers.
     struts: tuple[top, bottom, left, right: uint]
+    frameParts: tuple[left, center, right: seq[FramePart]]
   TagSet = array[9, bool] # distinct
   Wm = object
     dpy: ptr XDisplay
@@ -77,65 +61,6 @@ proc defaultTagSet(): TagSet = [true, false, false, false, false, false, false,
 proc switchTag(self: var TagSet; tag: uint8): void =
   for i, _ in self: self[i] = false
   self[tag] = true
-
-func getNetAtoms*(dpy: ptr Display): array[NetAtom, Atom] =
-  [
-    dpy.XInternAtom("_NET_ACTIVE_WINDOW", false),
-    dpy.XInternAtom("_NET_SUPPORTED", false),
-    dpy.XInternAtom("_NET_SYSTEM_TRAY_S0", false),
-    dpy.XInternAtom("_NET_SYSTEM_TRAY_OPCODE", false),
-    dpy.XInternAtom("_NET_SYSTEM_TRAY_ORIENTATION", false),
-    dpy.XInternAtom("_NET_SYSTEM_TRAY_ORIENTATION_HORZ", false),
-    dpy.XInternAtom("_NET_WM_NAME", false),
-    dpy.XInternAtom("_NET_WM_STATE", false),
-    dpy.XInternAtom("_NET_WM_STATE_ABOVE", false),
-    dpy.XInternAtom("_NET_WM_STATE_STICKY", false),
-    dpy.XInternAtom("_NET_WM_STATE_MODAL", false),
-    dpy.XInternAtom("_NET_SUPPORTING_WM_CHECK", false),
-    dpy.XInternAtom("_NET_WM_STATE_FULLSCREEN", false),
-    dpy.XInternAtom("_NET_CLIENT_LIST", false),
-    dpy.XInternAtom("_NET_WM_STRUT_PARTIAL", false),
-    dpy.XInternAtom("_NET_WM_WINDOW_TYPE", false),
-    dpy.XInternAtom("_NET_WM_WINDOW_TYPE_NORMAL", false),
-    dpy.XInternAtom("_NET_WM_WINDOW_TYPE_DIALOG", false),
-    dpy.XInternAtom("_NET_WM_WINDOW_TYPE_UTILITY", false),
-    dpy.XInternAtom("_NET_WM_WINDOW_TYPE_TOOLBAR", false),
-    dpy.XInternAtom("_NET_WM_WINDOW_TYPE_SPLASH", false),
-    dpy.XInternAtom("_NET_WM_WINDOW_TYPE_MENU", false),
-    dpy.XInternAtom("_NET_WM_WINDOW_TYPE_DROPDOWN_MENU", false),
-    dpy.XInternAtom("_NET_WM_WINDOW_TYPE_POPUP_MENU", false),
-    dpy.XInternAtom("_NET_WM_WINDOW_TYPE_TOOLTIP", false),
-    dpy.XInternAtom("_NET_WM_WINDOW_TYPE_NOTIFICATION", false),
-    dpy.XInternAtom("_NET_WM_WINDOW_TYPE_DOCK", false),
-    dpy.XInternAtom("_NET_WM_DESKTOP", false),
-    dpy.XInternAtom("_NET_DESKTOP_VIEWPORT", false),
-    dpy.XInternAtom("_NET_NUMBER_OF_DESKTOPS", false),
-    dpy.XInternAtom("_NET_CURRENT_DESKTOP", false),
-    dpy.XInternAtom("_NET_DESKTOP_NAMES", false),
-    dpy.XInternAtom("_NET_FRAME_EXTENTS", false)
-  ]
-  
-func getIpcAtoms*(dpy: ptr Display): array[IpcAtom, Atom] =
-  [
-    dpy.XInternAtom("WORM_IPC_CLIENT_MESSAGE", false),
-    dpy.XInternAtom("WORM_IPC_BORDER_ACTIVE_PIXEL", false),
-    dpy.XInternAtom("WORM_IPC_BORDER_INACTIVE_PIXEL", false),
-    dpy.XInternAtom("WORM_IPC_BORDER_WIDTH", false),
-    dpy.XInternAtom("WORM_IPC_FRAME_PIXEL", false),
-    dpy.XInternAtom("WORM_IPC_FRAME_HEIGHT", false),
-    dpy.XInternAtom("WORM_IPC_TEXT_PIXEL", false),
-    dpy.XInternAtom("WORM_IPC_TEXT_FONT", false),
-    dpy.XInternAtom("WORM_IPC_TEXT_OFFSET", false),
-    dpy.XInternAtom("WORM_IPC_KILL_CLIENT", false),
-    dpy.XInternAtom("WORM_IPC_CLOSE_CLIENT", false),
-    dpy.XInternAtom("WORM_IPC_SWITCH_TAG", false),
-    dpy.XInternAtom("WORM_IPC_LAYOUT", false),
-    dpy.XInternAtom("WORM_IPC_MASTER", false),
-    dpy.XInternAtom("WORM_IPC_GAPS", false),
-    dpy.XInternAtom("WORM_IPC_STRUTS", false),
-    dpy.XInternAtom("WORM_IPC_MOVE_TAG", false),
-    dpy.XInternAtom("WORM_IPC_FLOAT", false)
-  ]
 
 func getProperty[T](
   dpy: ptr Display;
@@ -184,6 +109,7 @@ func findClient(self: var Wm; predicate: proc(client: Client): bool): Option[(
 proc updateClientList(self: Wm): void
 proc updateTagState(self: Wm): void
 proc tileWindows(self: var Wm): void
+proc renderTop(self: var Wm; client: var Client; rec: bool = false): void
 
 proc newWm: Wm =
   let dpy = XOpenDisplay nil
@@ -293,11 +219,38 @@ proc dispatchEvent(self: var Wm; ev: XEvent): void =
   else: discard
 
 proc handleButtonPress(self: var Wm; ev: XButtonEvent): void =
-  let clientOpt = self.findClient do (client: Client) -> bool:
-    client.frame.window == ev.subwindow or client.frame.top == ev.window
-  if clientOpt.isNone:
-    return
+  #if ev.subwindow == None or ev.window == self.root: return
+  var close = false
+  var clientOpt = self.findClient do (client: Client) -> bool:
+    client.frame.window == ev.subwindow or client.frame.title == ev.window or (
+      if ev.window == client.frame.close:
+        close = true
+        close
+      else:
+        false)
+  if clientOpt.isNone and ev.button == 1:
+    clientOpt = self.findClient do (client: Client) -> bool: client.window == ev.window
+    discard self.dpy.XAllowEvents(ReplayPointer, ev.time)
+  if clientOpt.isNone: return
   let client = clientOpt.get[0]
+  var quitClose = false
+  if close:
+    # check if closable
+    if self.config.frameParts.left.find(fpClose) == -1 and
+        self.config.frameParts.center.find(fpClose) == -1 and
+        self.config.frameParts.right.find(fpClose) == -1:
+      quitClose = false
+    else:
+      let cm = XEvent(xclient: XClientMessageEvent(format: 32,
+          theType: ClientMessage, serial: 0, sendEvent: true, display: self.dpy,
+          window: client.window, messageType: self.dpy.XInternAtom(
+              "WM_PROTOCOLS", false),
+          data: XClientMessageData(l: [clong self.dpy.XInternAtom(
+              "WM_DELETE_WINDOW", false), CurrentTime, 0, 0, 0])))
+      discard self.dpy.XSendEvent(client.window, false, NoEventMask, cast[
+          ptr XEvent](unsafeAddr cm))
+      quitClose = true
+  if quitClose: return
   discard self.dpy.XGrabPointer(client.frame.window, true, PointerMotionMask or
       ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime)
   var attr: XWindowAttributes
@@ -313,21 +266,23 @@ proc handleButtonPress(self: var Wm; ev: XButtonEvent): void =
             self.config.borderInactivePixel)
 
 proc handleButtonRelease(self: var Wm; ev: XButtonEvent): void =
+  #if ev.subwindow == None or ev.window == self.root: return
   if self.motionInfo.isSome: discard self.dpy.XUngrabPointer CurrentTime
   self.motionInfo = none MotionInfo
   let clientOpt = self.findClient do (client: Client) ->
       bool: client.frame.window == ev.window
   if clientOpt.isNone: return
   let client = clientOpt.get[0]
-  discard self.dpy.XClearWindow client.frame.top
-  client.draw.XftDrawStringUtf8(addr client.color, self.font,
-      cint self.config.textOffset.x, cint self.config.textOffset.y, cast[ptr char](cstring client.title), cint client.title.len)
+  self.renderTop client[]
   # ? we need to do something from the fullscreen/unfullscreen code I think.
 
 proc handleMotionNotify(self: var Wm; ev: XMotionEvent): void =
+  #if ev.subwindow == None or ev.window == self.root: return
   if self.motionInfo.isNone: return
   let clientOpt = self.findClient do (client: Client) ->
-      bool: client.frame.window == ev.window
+      bool:
+    client.frame.window == ev.window or client.frame.title == ev.window
+    # false
   if clientOpt.isNone: return
   let client = clientOpt.get[0]
   if client.fullscreen: return
@@ -398,8 +353,16 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
       cuint attr.width, cuint self.config.frameHeight, 0, attr.depth,
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
-  for window in [frame, ev.window, top]: discard self.dpy.XMapWindow window
-  let draw = self.dpy.XftDrawCreate(top, attr.visual, attr.colormap)
+  let titleWin = self.dpy.XCreateWindow(top, 0, 0,
+      cuint attr.width, cuint self.config.frameHeight, 0, attr.depth,
+      InputOutput,
+      attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
+  let close = self.dpy.XCreateWindow(top, cint attr.width - (14 + 8), 0,
+      14, cuint self.config.frameHeight, 0, attr.depth,
+      InputOutput,
+      attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
+  for window in [frame, ev.window, top, titleWin]: discard self.dpy.XMapWindow window
+  let draw = self.dpy.XftDrawCreate(titleWin, attr.visual, attr.colormap)
   var color: XftColor
   discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring("#" &
       self.config.textPixel.toHex 6), addr color)
@@ -416,26 +379,25 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
         ptr cstring](addr prop_return))
     cstring prop_return
   if title == nil: title = "Unnamed Window" # why the heck does this window not have a name?!
-  while true:
-    var currEv: XEvent
-    if self.dpy.XNextEvent(addr currEv) != Success: continue
-    if currEv.theType == Expose:
-      # For text
-      # var extents: XGlyphInfo
-      # self.dpy.XftTextExtentsUtf8(self.font, cast[cstring](title), cint title.len, addr extents)
-      draw.XftDrawStringUtf8(addr color, self.font,
-          cint self.config.textOffset.x, cint self.config.textOffset.y, cast[
-          ptr char](title), cint title.len)
-      break
   for button in [1'u8, 3]:
-    for mask in [uint32 0,  Mod2Mask,  LockMask,
-         Mod3Mask,  Mod2Mask or LockMask, 
-        LockMask or Mod3Mask,  Mod2Mask or Mod3Mask, 
+    for mask in [uint32 0, Mod2Mask, LockMask,
+         Mod3Mask, Mod2Mask or LockMask,
+        LockMask or Mod3Mask, Mod2Mask or Mod3Mask,
         Mod2Mask or LockMask or Mod3Mask]:
-      discard self.dpy.XGrabButton(button, mask, top, true, ButtonPressMask or
+      discard self.dpy.XGrabButton(button, mask, titleWin, true,
+        ButtonPressMask or
         PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None)
+  for mask in [uint32 0, Mod2Mask, LockMask,
+         Mod3Mask, Mod2Mask or LockMask,
+        LockMask or Mod3Mask, Mod2Mask or Mod3Mask,
+        Mod2Mask or LockMask or Mod3Mask]:
+    discard self.dpy.XGrabButton(1, mask, close, true, ButtonPressMask or
+        PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None)
+  discard self.dpy.XGrabButton(1, 0, ev.window, true, ButtonPressMask,
+      GrabModeSync, GrabModeSync, None, None)
   self.clients.add Client(window: ev.window, frame: Frame(window: frame,
-      top: top), draw: draw, color: color, title: $title, tags: self.tags, floating: self.layout == lyFloating)
+      top: top, close: close, title: titleWin), draw: draw, color: color,
+      title: $title, tags: self.tags, floating: self.layout == lyFloating)
   self.updateClientList
   let extents = [self.config.borderWidth, self.config.borderWidth,
       self.config.borderWidth+self.config.frameHeight, self.config.borderWidth]
@@ -455,6 +417,12 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
     if (self.focused.isSome and uint(i) != self.focused.get) or self.focused.isNone: discard self.dpy.XSetWindowBorder(client.frame.window,
             self.config.borderInactivePixel)
   if self.layout == lyTiling: self.tileWindows
+  while true:
+    var currEv: XEvent
+    if self.dpy.XNextEvent(addr currEv) != Success: continue
+    if currEv.theType == Expose:
+      self.renderTop self.clients[self.clients.len - 1]
+      break
 
 proc handleConfigureRequest(self: var Wm; ev: XConfigureRequestEvent): void =
   var changes = XWindowChanges(x: ev.x, y: ev.y, width: ev.width,
@@ -504,11 +472,33 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         var scrInfo = cast[ptr UncheckedArray[XineramaScreenInfo]](
             self.dpy.XineramaQueryScreens(addr scrNo))
         discard self.dpy.XSetWindowBorderWidth(client.frame.window, 0)
-        for window in [client.window, client.frame.window]:
-          discard self.dpy.XMoveResizeWindow(
-            window, 0, 0, cuint scrInfo[0].width, cuint scrInfo[
-            0].height) # TODO : we need to handle multi-monitor properly here, or else...
-          discard self.dpy.XRaiseWindow window
+        # where the hell is our window at
+        var x: int
+        var y: int
+        var width: uint
+        var height: uint
+        if scrno == 1:
+          # 1st monitor, cuz only one
+          x = 0
+          y = 0
+          width = scrInfo[0].width.uint
+          height = scrInfo[0].height.uint
+        else:
+          var cumulWidth = 0
+          var cumulHeight = 0
+          for i in countup(0, scrNo - 1):
+            cumulWidth += scrInfo[i].width
+            cumulHeight += scrInfo[i].height
+            if attr.x <= cumulWidth - attr.width and attr.y <= cumulHeight - attr.height:
+              x = scrInfo[i].xOrg
+              y = scrInfo[i].yOrg
+              width = scrInfo[i].width.uint
+              height = scrInfo[i].height.uint
+        discard self.dpy.XMoveResizeWindow(
+          client.frame.window, cint x, cint y, cuint width, cuint height)
+        discard self.dpy.XMoveResizeWindow(
+          client.window, 0, 0, cuint width, cuint height)
+        for window in [client.window, client.frame.window]: discard self.dpy.XRaiseWindow window
         discard self.dpy.XSetInputFocus(client.window, RevertToPointerRoot, CurrentTime)
         var arr = [self.netAtoms[NetWMStateFullScreen]]
         # change the property
@@ -529,11 +519,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
             cuint client.beforeGeom.get.height - self.config.frameHeight)
         discard self.dpy.XChangeProperty(client.window, self.netAtoms[
             NetWMState], XaAtom, 32, PropModeReplace, cast[cstring]([]), 0)
-        discard self.dpy.XClearWindow client.frame.window
-        client.draw.XftDrawStringUtf8(addr client.color, self.font,
-          cint self.config.textOffset.x, cint self.config.textOffset.y,
-          cast[
-          ptr char](cstring client.title), cint client.title.len)
+        self.renderTop client[]
         discard self.dpy.XSetWindowBorderWidth(client.frame.window,
             cuint self.config.borderWidth)
   elif ev.messageType == self.netAtoms[NetActiveWindow]:
@@ -544,6 +530,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
     let client = clientOpt.get[0]
     discard self.dpy.XSetInputFocus(client.window, RevertToPointerRoot, CurrentTime)
     discard self.dpy.XRaiseWindow client.frame.window
+    self.renderTop client[]
     self.focused = some clientOpt.get[1]
     discard self.dpy.XSetWindowBorder(client.frame.window,
         self.config.borderActivePixel)
@@ -642,10 +629,9 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring(
             "#" & self.config.textPixel.toHex 6), addr color)
         client.color = color
-        discard self.dpy.XClearWindow client.frame.top
-        client.draw.XftDrawStringUtf8(addr client.color, self.font,
-            cint self.config.textOffset.x, cint self.config.textOffset.y, cast[ptr char](cstring client.title), cint client.title.len)
+        self.renderTop client
     elif ev.data.l[0] == clong self.ipcAtoms[IpcTextFont]:
+      log "IpcTextFont"
       var fontProp: XTextProperty
       var fontList: ptr UncheckedArray[cstring]
       var n: cint
@@ -662,11 +648,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
       log "Changing text offset to (x: " & $ev.data.l[1] & ", y: " & $ev.data.l[
           2] & ")"
       self.config.textOffset = (x: uint ev.data.l[1], y: uint ev.data.l[2])
-      for client in self.clients:
-        discard self.dpy.XClearWindow client.frame.top
-        client.draw.XftDrawStringUtf8(unsafeAddr client.color, self.font,
-            cint self.config.textOffset.x, cint self.config.textOffset.y, cast[
-            ptr char](cstring client.title), cint client.title.len)
+      for client in self.clients.mitems: self.renderTop client
     elif ev.data.l[0] == clong self.ipcAtoms[IpcKillClient]:
       let window = if ev.data.l[1] == 0: self.clients[
           if self.focused.isSome: self.focused.get else: return].window else: Window ev.data.l[1]
@@ -749,7 +731,8 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
           clientOpt.get[1]
         else:
           if self.focused.isSome: self.focused.get else: return
-      self.clients[client].tags = [false, false, false, false, false, false, false, false, false]
+      self.clients[client].tags = [false, false, false, false, false, false,
+          false, false, false]
       self.clients[client].tags[tag] = true
       self.updateTagState
       if self.layout == lyTiling: self.tileWindows
@@ -764,6 +747,70 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
           if self.focused.isSome: self.focused.get else: return
       self.clients[client].floating = true
       if self.layout == lyTiling: self.tileWindows
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcFrameLeft]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcFrameLeft])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      if fontList == nil or fontList[0] == nil and err >= Success and n > 0: return
+      let x = ($fontList[0]).split ";"
+      var parts: seq[FramePart]
+      for v in x:
+        parts.add case v:
+          of "T": fpTitle
+          of "C": fpClose
+          else: continue
+      self.config.frameParts.left = parts
+      log $self.config.frameParts
+      XFreeStringList cast[ptr cstring](fontList)
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcFrameCenter]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcFrameCenter])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      if fontList == nil or fontList[0] == nil and err >= Success and n > 0: return
+      let x = ($fontList[0]).split ";"
+      var parts: seq[FramePart]
+      for v in x:
+        parts.add case v:
+          of "T": fpTitle
+          of "C": fpClose
+          else: continue
+      self.config.frameParts.center = parts
+      log $self.config.frameParts
+      XFreeStringList cast[ptr cstring](fontList)
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcFrameRight]:
+      log "Frame Right"
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcFrameRight])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      if fontList == nil or fontList[0] == nil and err >= Success and n > 0: return
+      let x = ($fontList[0]).split ";"
+      var parts: seq[FramePart]
+      for v in x:
+        parts.add case v:
+          of "T": fpTitle
+          of "C": fpClose
+          else: continue
+      self.config.frameParts.right = parts
+      log $self.config.frameParts
+      XFreeStringList cast[ptr cstring](fontList)
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcButtonOffset]:
+      self.config.buttonOffset = (
+        x: uint ev.data.l[1],
+        y: uint ev.data.l[2]
+      )
+      log $self.config.buttonOffset
 
 proc handleConfigureNotify(self: var Wm; ev: XConfigureEvent): void =
   let clientOpt = self.findClient do (client: Client) -> bool: client.window == ev.window
@@ -821,9 +868,7 @@ proc handlePropertyNotify(self: var Wm; ev: XPropertyEvent): void =
     $cstring prop_return
   if client.title == title: return
   client.title = title
-  discard self.dpy.XClearWindow client.frame.top
-  client.draw.XftDrawStringUtf8(addr client.color, self.font,
-      cint self.config.textOffset.x, cint self.config.textOffset.y, cast[ptr char](cstring client.title), cint client.title.len)
+  self.renderTop client[]
 
 proc updateTagState(self: Wm): void =
   for client in self.clients:
@@ -846,15 +891,26 @@ proc tileWindows(self: var Wm): void =
   if master == nil: return
   if clientLen == 0: return # we got nothing to tile.
   var scrNo: cint
-  var scrInfo = cast[ptr UncheckedArray[XineramaScreenInfo]](self.dpy.XineramaQueryScreens(addr scrNo))
+  var scrInfo = cast[ptr UncheckedArray[XineramaScreenInfo]](
+      self.dpy.XineramaQueryScreens(addr scrNo))
   # echo cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1)
   let masterWidth = if clientLen == 1:
-    uint scrInfo[0].width - self.config.struts.left.cint - self.config.struts.right.cint - cint self.config.borderWidth*2
+    uint scrInfo[0].width - self.config.struts.left.cint -
+        self.config.struts.right.cint - cint self.config.borderWidth*2
   else:
-    uint scrInfo[0].width shr 1 - self.config.struts.left.cint - cint self.config.borderWidth*2
+    uint scrInfo[0].width shr 1 - self.config.struts.left.cint -
+        cint self.config.borderWidth*2
   log $masterWidth
-  discard self.dpy.XMoveResizeWindow(master.frame.window, cint self.config.struts.left, cint self.config.struts.top, cuint masterWidth + self.config.borderWidth * 2, cuint scrInfo[0].height - self.config.struts.top.int16 - self.config.struts.bottom.int16)
-  discard self.dpy.XResizeWindow(master.window, cuint masterWidth, cuint scrInfo[0].height - self.config.struts.top.cint - self.config.struts.bottom.cint - self.config.frameHeight.cint  - cint self.config.borderWidth*2)
+  discard self.dpy.XMoveResizeWindow(master.frame.window,
+      cint self.config.struts.left, cint self.config.struts.top,
+      cuint masterWidth, cuint scrInfo[0].height -
+      self.config.struts.top.int16 - self.config.struts.bottom.int16 -
+      cint self.config.borderWidth*2)
+  discard self.dpy.XResizeWindow(master.window, cuint masterWidth,
+      cuint scrInfo[0].height - self.config.struts.top.cint -
+      self.config.struts.bottom.cint - self.config.frameHeight.cint -
+      cint self.config.borderWidth*2)
+  self.renderTop master[]
   # discard self.dpy.XMoveResizeWindow(master.frame.window, cint self.config.struts.left, cint self.config.struts.top, cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth * 2) - self.config.gaps*2 - int16 self.config.struts.right, cuint scrInfo[0].height - int16(self.config.borderWidth * 2) - int16(self.config.struts.top) - int16(self.config.struts.bottom)) # bring the master window up to cover half the screen
   # discard self.dpy.XResizeWindow(master.window, cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) - self.config.gaps*2 - int16 self.config.struts.right, cuint scrInfo[0].height - int16(self.config.borderWidth*2) - int16(self.config.frameHeight) - int16(self.config.struts.top) - int16(self.config.struts.bottom)) # bring the master window up to cover half the screen
   var irrevelantLen: uint = 0
@@ -863,22 +919,41 @@ proc tileWindows(self: var Wm): void =
       inc irrevelantLen
       continue
     if clientLen == 2:
-      discard self.dpy.XMoveWindow(client.frame.window, cint scrInfo[0].width shr 1 + self.config.gaps, cint self.config.struts.top)
-      discard self.dpy.XResizeWindow(client.window,cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) - self.config.gaps - self.config.struts.right.cint, cuint scrInfo[0].height - self.config.struts.top.cint - self.config.struts.bottom.cint - self.config.frameHeight.cint - cint self.config.borderWidth*2)
+      discard self.dpy.XMoveWindow(client.frame.window, cint scrInfo[
+          0].width shr 1 + self.config.gaps, cint self.config.struts.top)
+      discard self.dpy.XResizeWindow(client.window, cuint scrInfo[0].width shr (
+          if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) -
+          self.config.gaps - self.config.struts.right.cint, cuint scrInfo[
+          0].height - self.config.struts.top.cint -
+          self.config.struts.bottom.cint - self.config.frameHeight.cint -
+          cint self.config.borderWidth*2)
     else:
-      let stackElem = i - int irrevelantLen - 1 # How many windows are there in the stack? We must subtract 1 to ignore the master window; which we iterate over too.
+      let stackElem = i - int irrevelantLen -
+          1 # How many windows are there in the stack? We must subtract 1 to ignore the master window; which we iterate over too.
       let yGap = if stackElem != 0:
         self.config.gaps
       else:
         0
       # let subStrut = if stackElem = clientLen
-      # XXX: the if stackElem == 1: 0 else: self.config.gaps is a huge hack 
+      # XXX: the if stackElem == 1: 0 else: self.config.gaps is a huge hack
       # and also incorrect behavior; while usually un-noticeable it makes the top window in the stack bigger by the gaps. Fix this!!
-      discard self.dpy.XMoveWindow(client.frame.window, cint scrInfo[0].width shr 1 + yGap, cint((float(scrInfo[0].height) - (self.config.struts.bottom.float + self.config.struts.top.float))  * ((i - int irrevelantLen) / int clientLen - 1)) + self.config.struts.top.cint + (if stackElem == 1: 0 else: self.config.gaps.cint))
-      discard self.dpy.XResizeWindow(client.window,cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) - self.config.gaps - self.config.struts.right.cint, cuint ((scrInfo[0].height - self.config.struts.bottom.cint - self.config.struts.top.cint) div int16(clientLen - 1))  - int16(self.config.borderWidth*2) - int16(self.config.frameHeight) - (if stackElem == 1: 0 else: self.config.gaps))
+      discard self.dpy.XMoveWindow(client.frame.window, cint scrInfo[
+          0].width shr 1 + yGap, cint((float(scrInfo[0].height) - (
+          self.config.struts.bottom.float + self.config.struts.top.float)) * ((
+          i - int irrevelantLen) / int clientLen - 1)) +
+          self.config.struts.top.cint + (if stackElem ==
+          1: 0 else: self.config.gaps.cint))
+      discard self.dpy.XResizeWindow(client.window, cuint scrInfo[0].width shr (
+          if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) -
+          self.config.gaps - self.config.struts.right.cint, cuint ((scrInfo[
+          0].height - self.config.struts.bottom.cint -
+          self.config.struts.top.cint) div int16(clientLen - 1)) - int16(
+          self.config.borderWidth*2) - int16(self.config.frameHeight) - (
+          if stackElem == 1: 0 else: self.config.gaps))
       # the number of windows on the stack is i (the current client) minus the master window minus any irrevelant windows
       # discard self.dpy.XMoveResizeWindow(client.frame.window, cint scrInfo[0].width shr 1, cint(float(scrInfo[0].height) * ((i - int irrevelantLen) / int clientLen - 1)) + cint self.config.gaps, cuint scrInfo[0].width shr 1 - int16(self.config.borderWidth * 2) - self.config.gaps, cuint (scrInfo[0].height div int16(clientLen - 1)) - int16(self.config.struts.bottom) - int16(self.config.borderWidth * 2) - self.config.gaps) # bring the master window up to cover half the screen
       # discard self.dpy.XResizeWindow(client.window, cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) - self.config.gaps, cuint (scrInfo[0].height div int16(clientLen - 1)) - int16(self.config.struts.bottom) - int16(self.config.borderWidth*2) - int16(self.config.frameHeight) - self.config.gaps) # bring the master window up to cover half the screen
+    self.renderTop self.clients[i]
 
 proc main: void =
   if fileExists expandTilde "~/.config/worm/rc":
@@ -886,6 +961,104 @@ proc main: void =
   log "Starting Worm v0.2 (rewrite)"
   var wm = newWm()
   wm.eventLoop
+
+proc renderTop(self: var Wm; client: var Client; rec: bool = false): void =
+  var extent: XGlyphInfo
+  self.dpy.XftTextExtentsUtf8(self.font, cast[ptr char](cstring client.title),
+      cint client.title.len, addr extent)
+  var attr: XWindowAttributes
+  discard self.dpy.XGetWindowAttributes(client.frame.window, addr attr)
+  for win in [client.frame.title, client.frame.close]: discard self.dpy.XClearWindow win
+  var gc: GC
+  var gcVal: XGCValues
+  gc = self.dpy.XCreateGC(client.frame.close, 0, addr gcVal)
+  discard self.dpy.XSetForeground(gc, self.config.textPixel)
+  discard self.dpy.XSetBackground(gc, self.config.framePixel)
+  var
+    bw: cuint
+    bh: cuint
+    hx: cint
+    hy: cint
+    bitmap: PixMap
+  discard self.dpy.XReadBitmapFile(client.frame.close, "icon.bmp", addr bw,
+      addr bh, addr bitmap, addr hx, addr hy)
+  # draw the 3 'regions' of the titlebar; left, center, right
+  var closeExists = false
+  discard self.dpy.XUnmapWindow client.frame.close
+  for i, part in self.config.frameParts.left:
+    case part:
+    of fpTitle:
+      if not closeExists: discard self.dpy.XUnmapWindow client.frame.close
+      client.draw.XftDrawStringUtf8(addr client.color, self.font,
+        self.config.textOffset.x.cint + (if i == 1: 14 +
+            self.config.buttonOffset.x.cint else: 0),
+            cint self.config.textOffset.y, cast[
+          ptr char](cstring client.title), cint client.title.len)
+    of fpClose:
+      closeExists = true
+      discard self.dpy.XMapWindow client.frame.close
+      discard self.dpy.XMoveWindow(client.frame.close,
+          self.config.buttonOffset.x.cint + (if i == 1: extent.width +
+          self.config.textOffset.x.cint else: 0), 0)
+      discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, 14, 14,
+          0, cint self.config.buttonOffset.y, 1)
+  for i, part in self.config.frameParts.center:
+    case part:
+    of fpTitle:
+      if not closeExists: discard self.dpy.XUnmapWindow client.frame.close
+      client.draw.XftDrawStringUtf8(addr client.color, self.font,
+        cint(attr.width div 2) - cint (extent.width div 2),
+            cint self.config.textOffset.y, cast[
+          ptr char](cstring client.title), cint client.title.len)
+    of fpClose:
+      closeExists = true
+      discard self.dpy.XMapWindow client.frame.close
+      discard self.dpy.XMoveWindow(client.frame.close, (if i ==
+          0: -self.config.buttonOffset.x.cint else: self.config.buttonOffset.x.cint) +
+          (if i == 1: self.config.textOffset.x.cint +
+          extent.width div 2 else: 0) + (attr.width div 2) - (if i == 0 and
+          self.config.frameParts.center.len > 1: 14 +
+          extent.width div 2 else: 0), 0)
+      discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, 14, 14,
+          0, cint self.config.buttonOffset.y, 1)
+  for i, part in self.config.frameParts.right:
+    case part:
+    of fpTitle:
+      if not closeExists: discard self.dpy.XUnmapWindow client.frame.close
+      client.draw.XftDrawStringUtf8(addr client.color, self.font,
+        cint(attr.width) - cint (extent.width), cint self.config.textOffset.y,
+            cast[
+          ptr char](cstring client.title), cint client.title.len)
+    of fpClose:
+      closeExists = true
+      discard self.dpy.XMapWindow client.frame.close
+      discard self.dpy.XMoveWindow(client.frame.close, (if i ==
+          0: -self.config.buttonOffset.x.cint else: self.config.buttonOffset.x.cint) +
+          (if i == 1: self.config.textOffset.x.cint +
+          extent.width div 2 else: 0) + (attr.width) - 14 - (if i == 0 and
+          self.config.frameParts.center.len > 1: 14 +
+          extent.width div 2 else: 0), 0)
+      discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, 14, 14,
+          0, cint self.config.buttonOffset.y, 1)
+    # else: discard
+  # client.draw.XftDrawStringUtf8(addr client.color, self.font,
+  #   cint max(int(self.config.textOffset.x) + int(attr.width div 2) - int(extent.width div 2), 0), cint self.config.textOffset.y, cast[
+  #   ptr char](cstring client.title), cint client.title.len)
+  # var gc: GC
+  # var gcVal: XGCValues
+  # gc = self.dpy.XCreateGC(client.frame.close, 0, addr gcVal)
+  # discard self.dpy.XSetForeground(gc, self.config.textPixel)
+  # discard self.dpy.XSetBackground(gc, self.config.framePixel)
+  # var
+  #   bw: cuint
+  #   bh: cuint
+  #   hx: cint
+  #   hy: cint
+  #   bitmap: PixMap
+  # discard self.dpy.XReadBitmapFile(client.frame.close, "icon.bmp", addr bw, addr bh, addr bitmap, addr hx, addr hy)
+  # discard self.dpy.XMoveWindow(client.frame.close, cint attr.width - (14 + 8), 0)
+  # discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, 14, 14,0, 10, 1)
+  if not rec: self.renderTop client, true # go over it again to fix some issues with drawing on top of each other. idk why this works, tbh. figure out better solution later.
 
 when isMainModule:
   main()
