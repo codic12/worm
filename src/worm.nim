@@ -40,6 +40,8 @@ type
     gaps: int # TODO: fix the type errors and change this to unsigned integers.
     struts: tuple[top, bottom, left, right: uint]
     frameParts: tuple[left, center, right: seq[FramePart]]
+    buttonSize: uint # always square FOR NOW
+    rootMenu: string
   TagSet = array[9, bool] # distinct
   Wm = object
     dpy: ptr XDisplay
@@ -124,7 +126,7 @@ proc newWm: Wm =
         Mod2Mask or LockMask or Mod3Mask]:
       discard dpy.XGrabButton(button, mask, root, true, ButtonPressMask or
         PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None)
-  discard dpy.XSelectInput(root, SubstructureRedirectMask or SubstructureNotifyMask)
+  discard dpy.XSelectInput(root, SubstructureRedirectMask or SubstructureNotifyMask or ButtonPressMask)
   let font = dpy.XftFontOpenName(XDefaultScreen dpy, "Noto Sans Mono:size=11")
   let netAtoms = getNetAtoms dpy
   discard dpy.XChangeProperty(
@@ -193,7 +195,7 @@ proc newWm: Wm =
           borderActivePixel: 0x7499CC, borderInactivePixel: 0x000000,
           borderWidth: 1,
           framePixel: 0x161821, frameHeight: 30,
-          textPixel: 0xffffff, textOffset: (x: uint 10, y: uint 20), gaps: 0,
+          textPixel: 0xffffff, textOffset: (x: uint 10, y: uint 20), gaps: 0, buttonSize: 14,
               struts: (top: uint 10, bottom: uint 40, left: uint 10,
               right: uint 10)), tags: defaultTagSet(),
               layout: lyFloating) # The default configuration is reasonably sane, and for now based on the Iceberg colorscheme. It may be changed later; it's recommended for users to write their own.
@@ -219,6 +221,12 @@ proc dispatchEvent(self: var Wm; ev: XEvent): void =
   else: discard
 
 proc handleButtonPress(self: var Wm; ev: XButtonEvent): void =
+  if ev.subwindow == None and ev.window == self.root and ev.button == 3:
+    log "Root menu"
+    if self.config.rootMenu != "" and fileExists expandTilde self.config.rootMenu:
+      discard startProcess expandTilde self.config.rootMenu
+    discard self.dpy.XAllowEvents(ReplayPointer, ev.time)
+    return
   #if ev.subwindow == None or ev.window == self.root: return
   var close = false
   var clientOpt = self.findClient do (client: Client) -> bool:
@@ -277,7 +285,7 @@ proc handleButtonRelease(self: var Wm; ev: XButtonEvent): void =
   # ? we need to do something from the fullscreen/unfullscreen code I think.
 
 proc handleMotionNotify(self: var Wm; ev: XMotionEvent): void =
-  #if ev.subwindow == None or ev.window == self.root: return
+  #if ev.subwindow == None or ev.window == self.root
   if self.motionInfo.isNone: return
   let clientOpt = self.findClient do (client: Client) ->
       bool:
@@ -357,8 +365,8 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
       cuint attr.width, cuint self.config.frameHeight, 0, attr.depth,
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
-  let close = self.dpy.XCreateWindow(top, cint attr.width - (14 + 8), 0,
-      14, cuint self.config.frameHeight, 0, attr.depth,
+  let close = self.dpy.XCreateWindow(top, cint attr.width - self.config.buttonSize.cint, 0,
+      self.config.buttonSize.cuint, cuint self.config.frameHeight, 0, attr.depth,
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
   for window in [frame, ev.window, top, titleWin]: discard self.dpy.XMapWindow window
@@ -811,6 +819,21 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         y: uint ev.data.l[2]
       )
       log $self.config.buttonOffset
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcButtonSize]:
+      self.config.buttonSize = uint ev.data.l[1]
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcRootMenu]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcRootMenu])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing root menu path to " & $fontList[0]
+      self.config.rootMenu = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
 
 proc handleConfigureNotify(self: var Wm; ev: XConfigureEvent): void =
   let clientOpt = self.findClient do (client: Client) -> bool: client.window == ev.window
@@ -990,7 +1013,7 @@ proc renderTop(self: var Wm; client: var Client; rec: bool = false): void =
     of fpTitle:
       if not closeExists: discard self.dpy.XUnmapWindow client.frame.close
       client.draw.XftDrawStringUtf8(addr client.color, self.font,
-        self.config.textOffset.x.cint + (if i == 1: 14 +
+        self.config.textOffset.x.cint + (if i == 1: self.config.buttonSize.cint +
             self.config.buttonOffset.x.cint else: 0),
             cint self.config.textOffset.y, cast[
           ptr char](cstring client.title), cint client.title.len)
@@ -1000,7 +1023,7 @@ proc renderTop(self: var Wm; client: var Client; rec: bool = false): void =
       discard self.dpy.XMoveWindow(client.frame.close,
           self.config.buttonOffset.x.cint + (if i == 1: extent.width +
           self.config.textOffset.x.cint else: 0), 0)
-      discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, 14, 14,
+      discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint,
           0, cint self.config.buttonOffset.y, 1)
   for i, part in self.config.frameParts.center:
     case part:
@@ -1017,9 +1040,9 @@ proc renderTop(self: var Wm; client: var Client; rec: bool = false): void =
           0: -self.config.buttonOffset.x.cint else: self.config.buttonOffset.x.cint) +
           (if i == 1: self.config.textOffset.x.cint +
           extent.width div 2 else: 0) + (attr.width div 2) - (if i == 0 and
-          self.config.frameParts.center.len > 1: 14 +
+          self.config.frameParts.center.len > 1: self.config.buttonSize.cint +
           extent.width div 2 else: 0), 0)
-      discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, 14, 14,
+      discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint,
           0, cint self.config.buttonOffset.y, 1)
   for i, part in self.config.frameParts.right:
     case part:
@@ -1035,10 +1058,10 @@ proc renderTop(self: var Wm; client: var Client; rec: bool = false): void =
       discard self.dpy.XMoveWindow(client.frame.close, (if i ==
           0: -self.config.buttonOffset.x.cint else: self.config.buttonOffset.x.cint) +
           (if i == 1: self.config.textOffset.x.cint +
-          extent.width div 2 else: 0) + (attr.width) - 14 - (if i == 0 and
-          self.config.frameParts.center.len > 1: 14 +
+          extent.width div 2 else: 0) + (attr.width) - self.config.buttonSize.cint - (if i == 0 and
+          self.config.frameParts.center.len > 1: self.config.buttonSize.cint +
           extent.width div 2 else: 0), 0)
-      discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, 14, 14,
+      discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint,
           0, cint self.config.buttonOffset.y, 1)
     # else: discard
   # client.draw.XftDrawStringUtf8(addr client.color, self.font,
@@ -1056,8 +1079,8 @@ proc renderTop(self: var Wm; client: var Client; rec: bool = false): void =
   #   hy: cint
   #   bitmap: PixMap
   # discard self.dpy.XReadBitmapFile(client.frame.close, "icon.bmp", addr bw, addr bh, addr bitmap, addr hx, addr hy)
-  # discard self.dpy.XMoveWindow(client.frame.close, cint attr.width - (14 + 8), 0)
-  # discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, 14, 14,0, 10, 1)
+  # discard self.dpy.XMoveWindow(client.frame.close, cint attr.width - (self.config.buttonSize + 8), 0)
+  # discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, self.config.buttonSize, self.config.buttonSize,0, 10, 1)
   if not rec: self.renderTop client, true # go over it again to fix some issues with drawing on top of each other. idk why this works, tbh. figure out better solution later.
 
 when isMainModule:

@@ -65,6 +65,14 @@ proc main: void =
       dpy.XSetTextProperty(root, addr fontProp, ipcAtoms[IpcFrameRight])
       discard XFree fontProp.value
       data = [clong ipcAtoms[IpcFrameRight], 0, 0, 0, 0]
+    of "root-menu": # Ditto
+      var fontList = cstring params[i+1]
+      var fontProp: XTextProperty
+      discard dpy.XUtf8TextListToTextProperty(addr fontList, 1,
+          XUTF8StringStyle, addr fontProp)
+      dpy.XSetTextProperty(root, addr fontProp, ipcAtoms[IpcRootMenu])
+      discard XFree fontProp.value
+      data = [clong ipcAtoms[IpcRootMenu], 0, 0, 0, 0]
     of "text-offset": data = [clong ipcAtoms[IpcTextOffset],
         clong params[i+1].parseInt, clong params[i+2].parseInt, 0, 0]
     of "kill-client": data = [clong ipcAtoms[IpcKillClient], clong params[
@@ -91,6 +99,7 @@ proc main: void =
     of "float-active": data = [clong ipcAtoms[IpcFloat], 0, 0, 0, 0]
     of "button-offset": data = [clong ipcAtoms[IpcButtonOffset],
         clong params[i+1].parseInt, clong params[i+2].parseInt, 0, 0]
+    of "button-size": data = [clong ipcAtoms[IpcButtonSize], clong params[i+1].parseInt, 0, 0, 0]
     else: discard
     let event = XEvent(xclient: XClientMessageEvent(format: 32,
       theType: ClientMessage, serial: 0, sendEvent: true, display: dpy,
