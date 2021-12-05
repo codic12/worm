@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+exec nitrogen --restore &
+
+exec polybar top -q -c ~/.config/worm/polybar/config.ini &
+
+exec mpd &
+
+exec sxhkd -c ~/.config/worm/sxhkdrc &
+
+wormc border-width 6
+
+# These add support for pywal
+# wormc border-active-pixel $((16$(sed -n '4p' .cache/wal/colors)))
+# wormc border-inactive-pixel $((16$(sed -n '5p' .cache/wal/colors)))
+# wormc background-pixel $((16$(sed -n '6p' .cache/wal/colors)))
+
+wormc layout tiling
+wormc struts 75 20 20 20
+wormc gaps 20
+wormc frame-height 0

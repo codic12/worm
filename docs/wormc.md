@@ -49,7 +49,7 @@ Clears all other tags and enables given tag. Example: `wormc switch-tag 5`
 ### `layout(string)`
 Changes layout. `floating` for floating, `tiling` for tiling, otherwise wormc exits. Eg `wormc layout tiling`
 ### `struts(uint top, uint bottom, uint left, uint right)`
-Sets the struts, also known as the 'outer margins. These are used when maximizing windows (currently unimplemented, sorry!) and while tiling. Example: `wormc 10 50 10 10`.
+Sets the struts, also known as the 'outer margins. These are used when maximizing windows (currently unimplemented, sorry!) and while tiling. Example: `wormc struts 10 50 10 10`.
 ### `move-tag(uint tag, window id)`
 Clears the tags of the provided window and turns on the given tag; for example `wormc move-tag 5 123456789`.
 ### `move-active-tag(uint tag)`
