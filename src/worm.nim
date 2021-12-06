@@ -5,6 +5,7 @@ import std/[options, sequtils, strutils, osproc, os]
 import x11/[xlib, x, xft, xinerama, xatom, xutil, xrender]
 import log
 import atoms
+import pixie
 
 converter toXBool(x: bool): XBool = x.XBool
 converter toBool(x: XBool): bool = x.bool
@@ -13,7 +14,7 @@ type
   Layout = enum
     lyFloating, lyTiling
   FramePart = enum
-    fpTitle, fpClose
+    fpTitle, fpClose, fpMaximize
   Geometry = object
     x, y: int
     width, height: uint
@@ -21,7 +22,8 @@ type
     start: XButtonEvent
     attr: XWindowAttributes
   Frame = object
-    window, top, close, title: Window
+    window, top, title: Window
+    close, maximize: Window # button parts
   Client = object
     window: Window
     frame: Frame
@@ -111,7 +113,7 @@ func findClient(self: var Wm; predicate: proc(client: Client): bool): Option[(
 proc updateClientList(self: Wm): void
 proc updateTagState(self: Wm): void
 proc tileWindows(self: var Wm): void
-proc renderTop(self: var Wm; client: var Client; rec: bool = false): void
+proc renderTop(self: var Wm; client: var Client): void
 
 proc newWm: Wm =
   let dpy = XOpenDisplay nil
@@ -369,6 +371,10 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
       self.config.buttonSize.cuint, cuint self.config.frameHeight, 0, attr.depth,
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
+  let maximize = self.dpy.XCreateWindow(top, cint attr.width - self.config.buttonSize.cint, 0,
+      self.config.buttonSize.cuint, cuint self.config.frameHeight, 0, attr.depth,
+      InputOutput,
+      attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
   for window in [frame, ev.window, top, titleWin]: discard self.dpy.XMapWindow window
   let draw = self.dpy.XftDrawCreate(titleWin, attr.visual, attr.colormap)
   var color: XftColor
@@ -404,7 +410,7 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
   discard self.dpy.XGrabButton(1, 0, ev.window, true, ButtonPressMask,
       GrabModeSync, GrabModeSync, None, None)
   self.clients.add Client(window: ev.window, frame: Frame(window: frame,
-      top: top, close: close, title: titleWin), draw: draw, color: color,
+      top: top, close: close, maximize: maximize, title: titleWin), draw: draw, color: color,
       title: $title, tags: self.tags, floating: self.layout == lyFloating)
   self.updateClientList
   let extents = [self.config.borderWidth, self.config.borderWidth,
@@ -770,6 +776,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         parts.add case v:
           of "T": fpTitle
           of "C": fpClose
+          of "M": fpMaximize
           else: continue
       self.config.frameParts.left = parts
       log $self.config.frameParts
@@ -789,6 +796,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         parts.add case v:
           of "T": fpTitle
           of "C": fpClose
+          of "M": fpMaximize
           else: continue
       self.config.frameParts.center = parts
       log $self.config.frameParts
@@ -809,6 +817,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         parts.add case v:
           of "T": fpTitle
           of "C": fpClose
+          of "M": fpMaximize
           else: continue
       self.config.frameParts.right = parts
       log $self.config.frameParts
@@ -985,7 +994,7 @@ proc main: void =
   var wm = newWm()
   wm.eventLoop
 
-proc renderTop(self: var Wm; client: var Client; rec: bool = false): void =
+proc renderTop(self: var Wm; client: var Client): void =
   var extent: XGlyphInfo
   self.dpy.XftTextExtentsUtf8(self.font, cast[ptr char](cstring client.title),
       cint client.title.len, addr extent)
@@ -1007,11 +1016,14 @@ proc renderTop(self: var Wm; client: var Client; rec: bool = false): void =
       addr bh, addr bitmap, addr hx, addr hy)
   # draw the 3 'regions' of the titlebar; left, center, right
   var closeExists = false
+  var maximizeExists = false
   discard self.dpy.XUnmapWindow client.frame.close
+  discard self.dpy.XUnmapWindow client.frame.maximize
   for i, part in self.config.frameParts.left:
     case part:
     of fpTitle:
       if not closeExists: discard self.dpy.XUnmapWindow client.frame.close
+      if not maximizeExists: discard self.dpy.XUnmapWindow client.frame.maximize
       client.draw.XftDrawStringUtf8(addr client.color, self.font,
         self.config.textOffset.x.cint + (if i == 1: self.config.buttonSize.cint +
             self.config.buttonOffset.x.cint else: 0),
@@ -1021,10 +1033,76 @@ proc renderTop(self: var Wm; client: var Client; rec: bool = false): void =
       closeExists = true
       discard self.dpy.XMapWindow client.frame.close
       discard self.dpy.XMoveWindow(client.frame.close,
-          self.config.buttonOffset.x.cint + (if i == 1: extent.width +
-          self.config.textOffset.x.cint else: 0), 0)
-      discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint,
-          0, cint self.config.buttonOffset.y, 1)
+          self.config.buttonOffset.x.cint + (
+            if i == 1 and self.config.frameParts.left[0] == fpTitle: extent.width +
+              self.config.textOffset.x.cint
+            elif i == 1 and self.config.frameParts.left[0] == fpMaximize:
+              self.config.buttonSize.cint + self.config.buttonOffset.x.cint
+            elif i == 2 and self.config.frameParts.left[0] == fpTitle and self.config.frameParts.left[1] == fpMaximize:
+              extent.width + self.config.textOffset.x.cint + self.config.buttonOffset.x.cint + self.config.buttonSize.cint
+            else: 0), self.config.buttonOffset.y.cint)
+      var
+        screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
+      let buttonColor = cast[array[3, uint8]](self.config.framePixel)
+      screen.fill(rgba(buttonColor[2],buttonColor[1],buttonColor[0],255))
+      let img = readImage("/home/user/worm/close.png")
+      screen.draw(
+        img,
+        # translate(vec2(100, 100)) *
+        scale(vec2(self.config.buttonSize.int / img.width, self.config.buttonSize.int / img.height))
+        # translate(vec2(-450, -450))
+      )
+      log $attr.depth
+      screen.writeFile "close_render.png"
+      var ctx = newContext screen
+      # convert to BGRA
+      var frameBufferEndian = ctx.image.data
+      for i, color in frameBufferEndian:
+        let x = color
+        # RGBX -> BGRX
+        frameBufferEndian[i].r = x.b
+        frameBufferEndian[i].b = x.r
+      var frameBuffer = addr frameBufferEndian[0]
+      let image = XCreateImage(self.dpy, attr.visual, attr.depth.cuint, ZPixmap, 0, cast[cstring](
+          frameBuffer), self.config.buttonSize.cuint, self.config.buttonSize.cuint, 8, cint(self.config.buttonSize*4))
+      discard XPutImage(self.dpy, client.frame.close, gc, image, 0, 0, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint)
+    of fpMaximize:
+      maximizeExists = true
+      discard self.dpy.XMapWindow client.frame.maximize
+      discard self.dpy.XMoveWindow(client.frame.maximize,
+          self.config.buttonOffset.x.cint + (
+            if i == 1 and self.config.frameParts.left[0] == fpTitle: 
+              extent.width + self.config.textOffset.x.cint
+            elif i == 1 and self.config.frameParts.left[0] == fpClose:
+              self.config.buttonSize.cint + self.config.buttonOffset.x.cint + self.config.textOffset.x.cint
+            elif i == 2 and self.config.frameParts.left[0] == fpTitle and self.config.frameParts.left[1] == fpClose:
+              extent.width + self.config.textOffset.x.cint + self.config.buttonOffset.x.cint + self.config.buttonSize.cint
+            else: 0), self.config.buttonOffset.y.cint)
+      var
+        screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
+      let buttonColor = cast[array[3, uint8]](self.config.framePixel)
+      screen.fill(rgba(buttonColor[2],buttonColor[1],buttonColor[0],255))
+      let img = readImage("/home/user/worm/maximize.png")
+      screen.draw(
+        img,
+        # translate(vec2(100, 100)) *
+        scale(vec2(self.config.buttonSize.int / img.width, self.config.buttonSize.int / img.height))
+        # translate(vec2(-450, -450))
+      )
+      log $attr.depth
+      screen.writeFile "close_render.png"
+      var ctx = newContext screen
+      # convert to BGRA
+      var frameBufferEndian = ctx.image.data
+      for i, color in frameBufferEndian:
+        let x = color
+        # RGBX -> BGRX
+        frameBufferEndian[i].r = x.b
+        frameBufferEndian[i].b = x.r
+      var frameBuffer = addr frameBufferEndian[0]
+      let image = XCreateImage(self.dpy, attr.visual, attr.depth.cuint, ZPixmap, 0, cast[cstring](
+          frameBuffer), self.config.buttonSize.cuint, self.config.buttonSize.cuint, 8, cint(self.config.buttonSize*4))
+      discard XPutImage(self.dpy, client.frame.maximize, gc, image, 0, 0, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint)
   for i, part in self.config.frameParts.center:
     case part:
     of fpTitle:
@@ -1035,15 +1113,43 @@ proc renderTop(self: var Wm; client: var Client; rec: bool = false): void =
           ptr char](cstring client.title), cint client.title.len)
     of fpClose:
       closeExists = true
-      discard self.dpy.XMapWindow client.frame.close
+      discard self.dpy.XMoveWindow(client.frame.close,
+          self.config.buttonOffset.x.cint + (if i == 1: extent.width +
+          self.config.textOffset.x.cint else: 0), self.config.buttonOffset.y.cint)
+      var
+        screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
+      let buttonColor = cast[array[3, uint8]](self.config.framePixel)
+      screen.fill(rgba(buttonColor[2],buttonColor[1],buttonColor[0],255))
+      let img = readImage("/home/user/worm/close.png")
+      screen.draw(
+        img,
+        # translate(vec2(100, 100)) *
+        scale(vec2(self.config.buttonSize.int / img.width, self.config.buttonSize.int / img.height))
+        # translate(vec2(-450, -450))
+      )
+      log $attr.depth
+      screen.writeFile "close_render.png"
+      var ctx = newContext screen
+      # convert to BGRA
+      var frameBufferEndian = ctx.image.data
+      for i, color in frameBufferEndian:
+        let x = color
+        # RGBX -> BGRX
+        frameBufferEndian[i].r = x.b
+        frameBufferEndian[i].b = x.r
+      var frameBuffer = addr frameBufferEndian[0]
+      let image = XCreateImage(self.dpy, attr.visual, attr.depth.cuint, ZPixmap, 0, cast[cstring](
+          frameBuffer), self.config.buttonSize.cuint, self.config.buttonSize.cuint, 8, cint(self.config.buttonSize*4))
       discard self.dpy.XMoveWindow(client.frame.close, (if i ==
           0: -self.config.buttonOffset.x.cint else: self.config.buttonOffset.x.cint) +
           (if i == 1: self.config.textOffset.x.cint +
           extent.width div 2 else: 0) + (attr.width div 2) - (if i == 0 and
           self.config.frameParts.center.len > 1: self.config.buttonSize.cint +
-          extent.width div 2 else: 0), 0)
-      discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint,
-          0, cint self.config.buttonOffset.y, 1)
+          extent.width div 2 else: 0), self.config.buttonOffset.y.cint)
+      discard self.dpy.XMapWindow client.frame.close
+
+      discard XPutImage(self.dpy, client.frame.close, gc, image, 0, 0, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint)
+    of fpMaximize: discard
   for i, part in self.config.frameParts.right:
     case part:
     of fpTitle:
@@ -1054,34 +1160,42 @@ proc renderTop(self: var Wm; client: var Client; rec: bool = false): void =
           ptr char](cstring client.title), cint client.title.len)
     of fpClose:
       closeExists = true
-      discard self.dpy.XMapWindow client.frame.close
+      discard self.dpy.XMoveWindow(client.frame.close,
+          self.config.buttonOffset.x.cint + (if i == 1: extent.width +
+          self.config.textOffset.x.cint else: 0), self.config.buttonOffset.y.cint)
+      var
+        screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
+      let buttonColor = cast[array[3, uint8]](self.config.framePixel)
+      screen.fill(rgba(buttonColor[2],buttonColor[1],buttonColor[0],255))
+      let img = readImage("/home/user/worm/close.png")
+      screen.draw(
+        img,
+        # translate(vec2(100, 100)) *
+        scale(vec2(self.config.buttonSize.int / img.width, self.config.buttonSize.int / img.height))
+        # translate(vec2(-450, -450))
+      )
+      log $attr.depth
+      screen.writeFile "close_render.png"
+      var ctx = newContext screen
+      # convert to BGRA
+      var frameBufferEndian = ctx.image.data
+      for i, color in frameBufferEndian:
+        let x = color
+        # RGBX -> BGRX
+        frameBufferEndian[i].r = x.b
+        frameBufferEndian[i].b = x.r
+      var frameBuffer = addr frameBufferEndian[0]
+      let image = XCreateImage(self.dpy, attr.visual, attr.depth.cuint, ZPixmap, 0, cast[cstring](
+          frameBuffer), self.config.buttonSize.cuint, self.config.buttonSize.cuint, 8, cint(self.config.buttonSize*4))
       discard self.dpy.XMoveWindow(client.frame.close, (if i ==
           0: -self.config.buttonOffset.x.cint else: self.config.buttonOffset.x.cint) +
           (if i == 1: self.config.textOffset.x.cint +
           extent.width div 2 else: 0) + (attr.width) - self.config.buttonSize.cint - (if i == 0 and
           self.config.frameParts.center.len > 1: self.config.buttonSize.cint +
-          extent.width div 2 else: 0), 0)
-      discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint,
-          0, cint self.config.buttonOffset.y, 1)
-    # else: discard
-  # client.draw.XftDrawStringUtf8(addr client.color, self.font,
-  #   cint max(int(self.config.textOffset.x) + int(attr.width div 2) - int(extent.width div 2), 0), cint self.config.textOffset.y, cast[
-  #   ptr char](cstring client.title), cint client.title.len)
-  # var gc: GC
-  # var gcVal: XGCValues
-  # gc = self.dpy.XCreateGC(client.frame.close, 0, addr gcVal)
-  # discard self.dpy.XSetForeground(gc, self.config.textPixel)
-  # discard self.dpy.XSetBackground(gc, self.config.framePixel)
-  # var
-  #   bw: cuint
-  #   bh: cuint
-  #   hx: cint
-  #   hy: cint
-  #   bitmap: PixMap
-  # discard self.dpy.XReadBitmapFile(client.frame.close, "icon.bmp", addr bw, addr bh, addr bitmap, addr hx, addr hy)
-  # discard self.dpy.XMoveWindow(client.frame.close, cint attr.width - (self.config.buttonSize + 8), 0)
-  # discard self.dpy.XCopyPlane(bitmap, client.frame.close, gc, 0, 0, self.config.buttonSize, self.config.buttonSize,0, 10, 1)
-  if not rec: self.renderTop client, true # go over it again to fix some issues with drawing on top of each other. idk why this works, tbh. figure out better solution later.
+          extent.width div 2 else: 0), self.config.buttonOffset.y.cint)
+      discard self.dpy.XMapWindow client.frame.close
+      discard XPutImage(self.dpy, client.frame.close, gc, image, 0, 0, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint)
+    of fpMaximize: discard
 
 when isMainModule:
   main()
