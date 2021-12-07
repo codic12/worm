@@ -1,0 +1,94 @@
+#!/bin/sh
+# shellcheck disable=2039,2086
+
+: ${JGMENU_EXEC_DIR=/usr/lib/jgmenu}
+
+export PATH="$JGMENU_EXEC_DIR:$PATH"
+JGMENU_LOCKFILE=~/.jgmenu-lockfile
+
+die () {
+	printf "fatal: %s\n" "$1"
+	exit 1
+}
+
+usage () {
+	printf "usage: jgmenu_run\n"
+	printf "       jgmenu_run <command> [<args>]\n\n"
+	printf "Top level convenience wrapper for jgmenu\n\n"
+	printf "If no 'command' or argument is specified, jgmenu_run does one of the following:\n"
+	printf "  - Shows the menu if an instance of jgmenu is already running\n"
+	printf "  - Starts jgmenu in 'stay-alive' mode (i.e. as a long-running application)\n"
+	printf "    using apps unless otherwise specified by 'csv_cmd' in jgmenurc\n\n"
+	printf "Commands are only intended for developers when plugging together modules.\n\n"
+	exit 0
+}
+
+print_exec_path () {
+	printf "%b\n" "${JGMENU_EXEC_DIR}"
+	exit 0
+}
+
+# Pipe to UNIX socket if tint2 button was used.
+send_tint2_env_vars_to_jgmenu () {
+	# Check set/unset with ${parameter+word}
+	test -z "${TINT2_BUTTON_ALIGNED_X1+x}" && return
+	printf "%b" \
+		"TINT2_BUTTON_ALIGNED_X1=${TINT2_BUTTON_ALIGNED_X1}\n" \
+		"TINT2_BUTTON_ALIGNED_X2=${TINT2_BUTTON_ALIGNED_X2}\n" \
+		"TINT2_BUTTON_ALIGNED_Y1=${TINT2_BUTTON_ALIGNED_Y1}\n" \
+		"TINT2_BUTTON_ALIGNED_Y2=${TINT2_BUTTON_ALIGNED_Y2}\n" \
+		"TINT2_BUTTON_PANEL_X1=${TINT2_BUTTON_PANEL_X1}\n" \
+		"TINT2_BUTTON_PANEL_X2=${TINT2_BUTTON_PANEL_X2}\n" \
+		"TINT2_BUTTON_PANEL_Y1=${TINT2_BUTTON_PANEL_Y1}\n" \
+		"TINT2_BUTTON_PANEL_Y2=${TINT2_BUTTON_PANEL_Y2}\n" \
+		| "${JGMENU_EXEC_DIR}/jgmenu-socket"
+}
+
+remove_lockfile () {
+	rm -f "${JGMENU_LOCKFILE}"
+	printf "warn: %b\n" "found old lockfile; lockfile removed"
+}
+
+# "jgmenu_run" with no arguments specified
+if test $# -lt 1
+then
+	# A primary objective here is to keep 'awake' quick
+	# Checking if the lockfile exists is much quicker than
+	# 'pgrep -x jgmenu' (30ms on my machine) or similar.
+	if test -e ${JGMENU_LOCKFILE}
+	then
+		send_tint2_env_vars_to_jgmenu
+		if killall -SIGUSR1 jgmenu >/dev/null 2>&1
+		then
+			exit 0
+		else
+			# We should not get to here unless
+			#   - there has been a crash (e.g. ASAN related)
+			#   - lockfile was left from a jgmenu compiled before
+			#     commit e3cb35 when we started to handle SIGTERM
+			#     and SIGINT
+			remove_lockfile
+		fi
+	fi
+
+	exec jgmenu --at-pointer
+	exit 0
+fi
+
+test "$1" = "--help" && usage
+test "$1" = "--exec-path" && print_exec_path
+
+cmd="$1"
+cmds="jgmenu-${cmd} jgmenu-${cmd}.sh jgmenu-${cmd}.py"
+shift
+
+for c in ${cmds}
+do
+	if type "${c}" >/dev/null 2>&1
+	then
+		exec "${c}" "$@"
+		exit 0
+	fi
+done
+
+die "'${cmd}' is not a jgmenu_run command"
