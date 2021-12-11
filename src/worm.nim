@@ -1219,6 +1219,8 @@ proc renderTop(self: var Wm; client: var Client): void =
             cint(attr.width) - (cint (extent.width) + self.config.buttonSize.cint + self.config.buttonOffset.x.cint)
         elif i == 2:
           cint(attr.width) - (cint (extent.width) + self.config.textOffset.x.cint)
+        elif i == 0 and self.config.frameParts.right.len == 3:
+          cint(attr.width) - (extent.width.cint + self.config.buttonSize.cint * 2 + self.config.buttonOffset.x.cint * 3)
         else: 0), cint self.config.textOffset.y,
             cast[
           ptr char](cstring client.title), cint client.title.len)
@@ -1252,8 +1254,8 @@ proc renderTop(self: var Wm; client: var Client): void =
           0: -self.config.buttonOffset.x.cint else: self.config.buttonOffset.x.cint) +
           (if i == 1 and self.config.frameParts.right.len == 2:
             -self.config.buttonSize.cint
-          elif i == 1 and self.config.frameParts.right.len == 3 and self.config.frameParts.right[0] == fpMaximize and self.config.frameParts.right[2] == fpTitle:
-            -extent.width - self.config.buttonSize.cint
+          elif i == 1 and self.config.frameParts.right.len == 3:
+            -extent.width - self.config.buttonOffset.x.cint
           elif i == 0 and self.config.frameParts.right.len == 2 and self.config.frameParts.right[1] == fpTitle:
             -extent.width
           elif i == 0 and self.config.frameParts.right.len == 2 and self.config.frameParts.right[1] == fpMaximize:
@@ -1272,8 +1274,10 @@ proc renderTop(self: var Wm; client: var Client): void =
       discard self.dpy.XMapWindow client.frame.maximize
       discard self.dpy.XMoveWindow(client.frame.maximize,
           self.config.buttonOffset.x.cint + (
-            if i == 1 and self.config.frameParts.right[0] == fpTitle: 
-              - self.config.buttonsize.cint
+            if i == 1 and self.config.frameParts.right[0] == fpTitle and self.config.frameParts.right.len == 3:
+              - self.config.buttonSize.cint * 2 - self.config.buttonOffset.x.cint
+            elif i == 1 and self.config.frameParts.right[0] == fpTitle:
+              - self.config.buttonSize.cint
             elif i == 1 and self.config.frameParts.right[0] == fpClose and self.config.frameParts.right.len == 3 and self.config.frameParts.right[2] == fpTitle:
               -extent.width - (self.config.buttonOffset.x.cint * 2)
             elif i == 1 and self.config.frameParts.right[0] == fpClose:
