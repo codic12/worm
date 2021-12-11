@@ -1260,6 +1260,8 @@ proc renderTop(self: var Wm; client: var Client): void =
             -self.config.buttonSize.cint*2
           elif i == 0 and self.config.frameParts.right.len == 3:
             -self.config.buttonSize.cint - (self.config.buttonOffset.x.cint + extent.width)
+          elif i == 2:
+            -self.config.buttonSize.cint
           else: 0) + (attr.width) - self.config.buttonSize.cint - (if i == 0 and
           self.config.frameParts.center.len > 1: self.config.buttonSize.cint +
           extent.width div 2 else: 0), self.config.buttonOffset.y.cint)
@@ -1277,13 +1279,13 @@ proc renderTop(self: var Wm; client: var Client): void =
             elif i == 1 and self.config.frameParts.right[0] == fpClose:
               - self.config.buttonOffset.x.cint * 2
             elif i == 2:
-              extent.width - (self.config.buttonOffset.x.cint + self.config.buttonSize.cint)
+              -(self.config.buttonOffset.x.cint * 2)
             elif i == 0 and self.config.frameParts.right.len == 2 and self.config.frameParts.right[1] == fpClose:
               -(self.config.buttonOffset.x.cint * 4) - self.config.buttonSize.cint
             elif i == 0 and self.config.frameParts.right.len > 2 and self.config.frameParts.right[1] == fpClose:
               -(self.config.buttonOffset.x.cint * 3) - (self.config.buttonSize.cint + extent.width)
             elif i == 0 and self.config.frameParts.right.len >= 2 and self.config.frameParts.right[1] == fpTitle:
-              -extent.width - self.config.buttonOffset.x.cint - self.config.buttonSize.cint
+              -extent.width - self.config.buttonOffset.x.cint - self.config.buttonSize.cint*2
             elif i == 0 and self.config.frameParts.right.len == 1:
               - self.config.buttonOffset.x.cint * 2
             else: 0) + (attr.width) - self.config.buttonSize.cint, self.config.buttonOffset.y.cint)
