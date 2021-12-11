@@ -44,6 +44,7 @@ type
     frameParts: tuple[left, center, right: seq[FramePart]]
     buttonSize: uint # always square FOR NOW
     rootMenu: string
+    closePath, maximizePath: string
   TagSet = array[9, bool] # distinct
   Wm = object
     dpy: ptr XDisplay
@@ -114,6 +115,7 @@ proc updateClientList(self: Wm): void
 proc updateTagState(self: Wm): void
 proc tileWindows(self: var Wm): void
 proc renderTop(self: var Wm; client: var Client): void
+proc maximizeClient(self: var Wm; client: var Client): void
 
 proc newWm: Wm =
   let dpy = XOpenDisplay nil
@@ -231,19 +233,24 @@ proc handleButtonPress(self: var Wm; ev: XButtonEvent): void =
     return
   #if ev.subwindow == None or ev.window == self.root: return
   var close = false
+  var maximize = false
   var clientOpt = self.findClient do (client: Client) -> bool:
-    client.frame.window == ev.subwindow or client.frame.title == ev.window or (
+    (
       if ev.window == client.frame.close:
         close = true
         close
+      elif ev.window == client.frame.maximize:
+        maximize = true
+        maximize
       else:
-        false)
+        false) or client.frame.window == ev.subwindow or client.frame.title == ev.window
   if clientOpt.isNone and ev.button == 1:
     clientOpt = self.findClient do (client: Client) -> bool: client.window == ev.window
     discard self.dpy.XAllowEvents(ReplayPointer, ev.time)
   if clientOpt.isNone: return
   let client = clientOpt.get[0]
   var quitClose = false
+  var quitMaximize = false
   if close:
     # check if closable
     if self.config.frameParts.left.find(fpClose) == -1 and
@@ -261,6 +268,16 @@ proc handleButtonPress(self: var Wm; ev: XButtonEvent): void =
           ptr XEvent](unsafeAddr cm))
       quitClose = true
   if quitClose: return
+  if maximize:
+    # check if closable
+    if self.config.frameParts.left.find(fpMaximize) == -1 and
+        self.config.frameParts.center.find(fpMaximize) == -1 and
+        self.config.frameParts.right.find(fpMaximize) == -1:
+      quitMaximize = false
+    else:
+      self.maximizeClient client[]
+      quitMaximize = true
+  if quitMaximize: return
   discard self.dpy.XGrabPointer(client.frame.window, true, PointerMotionMask or
       ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime)
   var attr: XWindowAttributes
@@ -405,7 +422,7 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
          Mod3Mask, Mod2Mask or LockMask,
         LockMask or Mod3Mask, Mod2Mask or Mod3Mask,
         Mod2Mask or LockMask or Mod3Mask]:
-    discard self.dpy.XGrabButton(1, mask, close, true, ButtonPressMask or
+    for win in [close, maximize]: discard self.dpy.XGrabButton(1, mask, win, true, ButtonPressMask or
         PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None)
   discard self.dpy.XGrabButton(1, 0, ev.window, true, ButtonPressMask,
       GrabModeSync, GrabModeSync, None, None)
@@ -843,6 +860,32 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
       if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcClosePath]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcClosePath])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing root menu path to " & $fontList[0]
+      self.config.closePath = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMaximizePath]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcMaximizePath])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing root menu path to " & $fontList[0]
+      self.config.maximizePath = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
 
 proc handleConfigureNotify(self: var Wm; ev: XConfigureEvent): void =
   let clientOpt = self.findClient do (client: Client) -> bool: client.window == ev.window
@@ -1035,6 +1078,7 @@ proc renderTop(self: var Wm; client: var Client): void =
           ptr char](cstring client.title), cint client.title.len)
     of fpClose:
       closeExists = true
+      if not fileExists self.config.closePath: continue
       discard self.dpy.XMapWindow client.frame.close
       discard self.dpy.XMoveWindow(client.frame.close,
           self.config.buttonOffset.x.cint + (
@@ -1049,7 +1093,7 @@ proc renderTop(self: var Wm; client: var Client): void =
         screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
       let buttonColor = cast[array[3, uint8]](self.config.framePixel)
       screen.fill(rgba(buttonColor[2],buttonColor[1],buttonColor[0],255))
-      let img = readImage("/home/user/.config/worm/close.png")
+      let img = readImage(self.config.closePath)
       screen.draw(
         img,
         # translate(vec2(100, 100)) *
@@ -1057,7 +1101,6 @@ proc renderTop(self: var Wm; client: var Client): void =
         # translate(vec2(-450, -450))
       )
       log $attr.depth
-      screen.writeFile "close_render.png"
       var ctx = newContext screen
       # convert to BGRA
       var frameBufferEndian = ctx.image.data
@@ -1072,6 +1115,7 @@ proc renderTop(self: var Wm; client: var Client): void =
       discard XPutImage(self.dpy, client.frame.close, gc, image, 0, 0, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint)
     of fpMaximize:
       maximizeExists = true
+      if not fileExists self.config.maximizePath: continue
       discard self.dpy.XMapWindow client.frame.maximize
       discard self.dpy.XMoveWindow(client.frame.maximize,
           self.config.buttonOffset.x.cint + (
@@ -1086,7 +1130,7 @@ proc renderTop(self: var Wm; client: var Client): void =
         screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
       let buttonColor = cast[array[3, uint8]](self.config.framePixel)
       screen.fill(rgba(buttonColor[2],buttonColor[1],buttonColor[0],255))
-      let img = readImage("/home/user/.config/worm/maximize.png")
+      let img = readImage(self.config.maximizePath)
       screen.draw(
         img,
         # translate(vec2(100, 100)) *
@@ -1094,7 +1138,6 @@ proc renderTop(self: var Wm; client: var Client): void =
         # translate(vec2(-450, -450))
       )
       log $attr.depth
-      screen.writeFile "close_render.png"
       var ctx = newContext screen
       # convert to BGRA
       var frameBufferEndian = ctx.image.data
@@ -1117,11 +1160,12 @@ proc renderTop(self: var Wm; client: var Client): void =
           ptr char](cstring client.title), cint client.title.len)
     of fpClose:
       closeExists = true
+      if not fileExists self.config.closePath: continue
       var
         screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
       let buttonColor = cast[array[3, uint8]](self.config.framePixel)
       screen.fill(rgba(buttonColor[2],buttonColor[1],buttonColor[0],255))
-      let img = readImage("/home/user/.config/worm/close.png")
+      let img = readImage(self.config.closePath)
       screen.draw(
         img,
         # translate(vec2(100, 100)) *
@@ -1129,7 +1173,6 @@ proc renderTop(self: var Wm; client: var Client): void =
         # translate(vec2(-450, -450))
       )
       log $attr.depth
-      screen.writeFile "close_render.png"
       var ctx = newContext screen
       # convert to BGRA
       var frameBufferEndian = ctx.image.data
@@ -1165,6 +1208,7 @@ proc renderTop(self: var Wm; client: var Client): void =
       discard XPutImage(self.dpy, client.frame.close, gc, image, 0, 0, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint)
     of fpMaximize:
       maximizeExists = true
+      if not fileExists self.config.maximizePath: continue
       discard self.dpy.XMapWindow client.frame.maximize
       # M;T;C
       discard self.dpy.XMoveWindow(client.frame.maximize, (if i ==
@@ -1185,7 +1229,7 @@ proc renderTop(self: var Wm; client: var Client): void =
         screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
       let buttonColor = cast[array[3, uint8]](self.config.framePixel)
       screen.fill(rgba(buttonColor[2],buttonColor[1],buttonColor[0],255))
-      let img = readImage("/home/user/.config/worm/maximize.png")
+      let img = readImage(self.config.maximizePath)
       screen.draw(
         img,
         # translate(vec2(100, 100)) *
@@ -1193,7 +1237,6 @@ proc renderTop(self: var Wm; client: var Client): void =
         # translate(vec2(-450, -450))
       )
       log $attr.depth
-      screen.writeFile "close_render.png"
       var ctx = newContext screen
       # convert to BGRA
       var frameBufferEndian = ctx.image.data
@@ -1226,11 +1269,12 @@ proc renderTop(self: var Wm; client: var Client): void =
           ptr char](cstring client.title), cint client.title.len)
     of fpClose:
       closeExists = true
+      if not fileExists self.config.closePath: continue
       var
         screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
       let buttonColor = cast[array[3, uint8]](self.config.framePixel)
       screen.fill(rgba(buttonColor[2], buttonColor[1], buttonColor[0], 255))
-      let img = readImage("/home/user/.config/worm/close.png")
+      let img = readImage(self.config.closePath)
       screen.draw(
         img,
         # translate(vec2(100, 100)) *
@@ -1238,7 +1282,6 @@ proc renderTop(self: var Wm; client: var Client): void =
         # translate(vec2(-450, -450))
       )
       log $attr.depth
-      screen.writeFile "close_render.png"
       var ctx = newContext screen
       # convert to BGRA
       var frameBufferEndian = ctx.image.data
@@ -1271,6 +1314,7 @@ proc renderTop(self: var Wm; client: var Client): void =
       discard XPutImage(self.dpy, client.frame.close, gc, image, 0, 0, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint)
     of fpMaximize:
       maximizeExists = true
+      if not fileExists self.config.maximizePath: continue
       discard self.dpy.XMapWindow client.frame.maximize
       discard self.dpy.XMoveWindow(client.frame.maximize,
           self.config.buttonOffset.x.cint + (
@@ -1297,7 +1341,7 @@ proc renderTop(self: var Wm; client: var Client): void =
         screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
       let buttonColor = cast[array[3, uint8]](self.config.framePixel)
       screen.fill(rgba(buttonColor[2],buttonColor[1],buttonColor[0],255))
-      let img = readImage("/home/user/.config/worm/maximize.png")
+      let img = readImage(self.config.maximizePath)
       screen.draw(
         img,
         # translate(vec2(100, 100)) *
@@ -1305,7 +1349,6 @@ proc renderTop(self: var Wm; client: var Client): void =
         # translate(vec2(-450, -450))
       )
       log $attr.depth
-      screen.writeFile "close_render.png"
       var ctx = newContext screen
       # convert to BGRA
       var frameBufferEndian = ctx.image.data
@@ -1318,6 +1361,26 @@ proc renderTop(self: var Wm; client: var Client): void =
       let image = XCreateImage(self.dpy, attr.visual, attr.depth.cuint, ZPixmap, 0, cast[cstring](
           frameBuffer), self.config.buttonSize.cuint, self.config.buttonSize.cuint, 8, cint(self.config.buttonSize*4))
       discard XPutImage(self.dpy, client.frame.maximize, gc, image, 0, 0, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint)
+
+proc maximizeClient(self: var Wm; client: var Client): void =
+  # maximize the provided client
+  var scrNo: cint
+  var scrInfo = cast[ptr UncheckedArray[XineramaScreenInfo]](
+      self.dpy.XineramaQueryScreens(addr scrNo))
+  let masterWidth =
+    # why dosen't -left work here? can cause bug with not equal struts
+    uint scrInfo[0].width -
+        self.config.struts.right.cint - cint self.config.borderWidth*2
+  discard self.dpy.XMoveResizeWindow(client.frame.window,
+      cint self.config.struts.left, cint self.config.struts.top,
+      cuint masterWidth, cuint scrInfo[0].height -
+      self.config.struts.top.int16 - self.config.struts.bottom.int16 -
+      cint self.config.borderWidth*2)
+  discard self.dpy.XResizeWindow(client.window, cuint masterWidth,
+      cuint scrInfo[0].height - self.config.struts.top.cint -
+      self.config.struts.bottom.cint - self.config.frameHeight.cint -
+      cint self.config.borderWidth*2)
+  self.renderTop client
 
 when isMainModule:
   main()
