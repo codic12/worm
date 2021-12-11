@@ -116,6 +116,8 @@ proc main: void =
     of "button-offset": data = [clong ipcAtoms[IpcButtonOffset],
         clong params[i+1].parseInt, clong params[i+2].parseInt, 0, 0]
     of "button-size": data = [clong ipcAtoms[IpcButtonSize], clong params[i+1].parseInt, 0, 0, 0]
+    of "maximize-client": data = [clong ipcAtoms[IpcMaximizeClient], clong params[i+1].parseInt, 0, 0, 0]
+    of "maximize-active-client": data = [clong ipcAtoms[IpcMaximizeClient], 0, 0, 0, 0]
     else: discard
     let event = XEvent(xclient: XClientMessageEvent(format: 32,
       theType: ClientMessage, serial: 0, sendEvent: true, display: dpy,

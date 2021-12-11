@@ -22,7 +22,7 @@ type
         IpcBorderWidth, IpcFramePixel, IpcFrameHeight, IpcTextPixel,
             IpcTextFont, IpcTextOffset, IpcKillClient, IpcCloseClient, IpcSwitchTag, IpcLayout, IpcGaps, IpcMaster, IpcStruts,
                 IpcMoveTag, IpcFrameLeft, IpcFrameCenter, IpcFrameRight,
-                IpcFloat, IpcButtonOffset, IpcButtonSize, IpcRootMenu, IpcClosePath, IpcMaximizePath
+                IpcFloat, IpcButtonOffset, IpcButtonSize, IpcRootMenu, IpcClosePath, IpcMaximizePath, IpcMaximizeClient
 
 func getNetAtoms*(dpy: ptr Display): array[NetAtom, Atom] =
   [
@@ -88,5 +88,6 @@ func getIpcAtoms*(dpy: ptr Display): array[IpcAtom, Atom] =
     dpy.XInternAtom("WORM_IPC_BUTTON_SIZE", false),
     dpy.XInternAtom("WORM_IPC_ROOT_MENU", false),
     dpy.XInternAtom("WORM_IPC_CLOSE_PATH", false),
-    dpy.XInternAtom("WORM_IPC_MAXIMIZE_PATH", false)
+    dpy.XInternAtom("WORM_IPC_MAXIMIZE_PATH", false),
+    dpy.XInternAtom("WORM_IPC_MAXIMIZE_CLIENT", false)
   ]

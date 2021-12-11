@@ -694,6 +694,17 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         data: XClientMessageData(l: [clong self.dpy.XInternAtom(
             "WM_DELETE_WINDOW", false), CurrentTime, 0, 0, 0])))
       discard self.dpy.XSendEvent(window, false, NoEventMask, cast[ptr XEvent](unsafeAddr cm))
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMaximizeClient]:
+      let window = if ev.data.l[1] == 0: self.clients[
+          if self.focused.isSome: self.focused.get else: return].window else: Window ev.data.l[1]
+      var client: Client
+      if self.focused.isSome:
+        client = self.clients[self.focused.get]
+      else:
+        var co = self.findClient do (c: Client) -> bool: c.window == Window ev.data.l[1]
+        if co.isNone: return
+        client = (co.get)[0][]
+      self.maximizeClient client
     elif ev.data.l[0] == clong self.ipcAtoms[IpcSwitchTag]:
       self.tags.switchTag uint8 ev.data.l[1] - 1
       self.updateTagState
