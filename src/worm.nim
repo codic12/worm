@@ -1215,6 +1215,8 @@ proc renderTop(self: var Wm; client: var Client): void =
           cint(attr.width) - (cint (extent.width) + self.config.textOffset.x.cint)
         elif self.config.frameParts.right.len == 2 and i == 0 and self.config.frameParts.right[1] in {fpClose, fpMaximize}:
           cint(attr.width) - (cint (extent.width) + self.config.textOffset.x.cint + self.config.buttonOffset.x.cint + self.config.buttonSize.cint)
+        elif i == 1 and self.config.frameParts.right.len == 3 and self.config.frameParts.right[0] in {fpClose, fpMaximize}:
+            cint(attr.width) - (cint (extent.width) + self.config.buttonSize.cint + self.config.buttonOffset.x.cint)
         elif i == 2:
           cint(attr.width) - (cint (extent.width) + self.config.textOffset.x.cint)
         else: 0), cint self.config.textOffset.y,
