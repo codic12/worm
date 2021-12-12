@@ -484,6 +484,9 @@ proc handleUnmapNotify(self: var Wm; ev: XUnmapEvent): void =
   self.updateClientList
   discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
   self.focused.reset # TODO: focus last window
+  if self.clients.len == 0: return
+  discard self.dpy.XSetInputFocus(self.clients[self.clients.len - 1].window, RevertToPointerRoot, CurrentTime)
+  discard self.dpy.XRaiseWindow self.clients[self.clients.len - 1].frame.window
   if self.layout == lyTiling: self.tileWindows
 
 proc handleDestroyNotify(self: var Wm; ev: XDestroyWindowEvent): void =
@@ -495,8 +498,11 @@ proc handleDestroyNotify(self: var Wm; ev: XDestroyWindowEvent): void =
   self.updateClientList
   discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
   self.focused.reset # TODO: focus last window
+  if self.clients.len == 0: return
+  discard self.dpy.XSetInputFocus(self.clients[self.clients.len - 1].window, RevertToPointerRoot, CurrentTime)
+  discard self.dpy.XRaiseWindow self.clients[self.clients.len - 1].frame.window
   if self.layout == lyTiling: self.tileWindows
-
+  
 proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
   if ev.messageType == self.netAtoms[NetWMState]:
     let clientOpt = self.findClient do (client: Client) ->
