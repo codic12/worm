@@ -454,6 +454,19 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
     if currEv.theType == Expose:
       self.renderTop self.clients[self.clients.len - 1]
       break
+  for client in self.clients:
+    for i, tag in client.tags:
+      if self.tags[i] and tag:
+        for win in [client.frame.window, client.window]:
+          discard self.dpy.XChangeProperty(
+            win,
+            self.netAtoms[NetWMDesktop],
+            XaCardinal,
+            32,
+            PropModeReplace,
+            cast[cstring](unsafeAddr i),
+            1
+          )
 
 proc handleConfigureRequest(self: var Wm; ev: XConfigureRequestEvent): void =
   var changes = XWindowChanges(x: ev.x, y: ev.y, width: ev.width,
