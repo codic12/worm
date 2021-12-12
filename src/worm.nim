@@ -1446,7 +1446,7 @@ proc maximizeClient(self: var Wm; client: var Client): void =
       self.dpy.XineramaQueryScreens(addr scrNo))
   let masterWidth =
     uint scrInfo[0].width -
-        self.config.struts.left.cint - self.config.struts.right.cint - cint self.config.borderWidth*2
+        (self.config.struts.left.cint + self.config.struts.right.cint + cint self.config.borderWidth*2)
   discard self.dpy.XMoveResizeWindow(client.frame.window,
       cint self.config.struts.left, cint self.config.struts.top,
       cuint masterWidth, cuint scrInfo[0].height -
