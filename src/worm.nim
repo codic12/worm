@@ -458,17 +458,16 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
       break
   for client in self.clients:
     for i, tag in client.tags:
-      if self.tags[i] and tag:
-        for win in [client.frame.window, client.window]:
-          discard self.dpy.XChangeProperty(
-            win,
-            self.netAtoms[NetWMDesktop],
-            XaCardinal,
-            32,
-            PropModeReplace,
-            cast[cstring](unsafeAddr i),
-            1
-          )
+      if not tag: continue
+      discard self.dpy.XChangeProperty(
+        client.window,
+        self.netAtoms[NetWMDesktop],
+        XaCardinal,
+        32,
+        PropModeReplace,
+        cast[cstring](unsafeAddr i),
+        1
+      )
 
 proc handleConfigureRequest(self: var Wm; ev: XConfigureRequestEvent): void =
   var changes = XWindowChanges(x: ev.x, y: ev.y, width: ev.width,
@@ -490,6 +489,7 @@ proc handleUnmapNotify(self: var Wm; ev: XUnmapEvent): void =
   discard self.dpy.XSetInputFocus(self.clients[self.clients.len - 1].window, RevertToPointerRoot, CurrentTime)
   discard self.dpy.XRaiseWindow self.clients[self.clients.len - 1].frame.window
   if self.layout == lyTiling: self.tileWindows
+  self.updateTagState
 
 proc handleDestroyNotify(self: var Wm; ev: XDestroyWindowEvent): void =
   let clientOpt = self.findClient do (client: Client) -> bool: client.window == ev.window
@@ -504,6 +504,7 @@ proc handleDestroyNotify(self: var Wm; ev: XDestroyWindowEvent): void =
   discard self.dpy.XSetInputFocus(self.clients[self.clients.len - 1].window, RevertToPointerRoot, CurrentTime)
   discard self.dpy.XRaiseWindow self.clients[self.clients.len - 1].frame.window
   if self.layout == lyTiling: self.tileWindows
+  self.updateTagState
 
 proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
   if ev.messageType == self.netAtoms[NetWMState]:
