@@ -623,6 +623,18 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
     )
     discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
     self.focused = none uint
+    if self.clients.len == 0: return
+    var lcot = -1
+    for i, c in self.clients:
+      if c.tags == self.tags: lcot = i
+    if lcot == -1: return
+    self.focused = some uint lcot
+    discard self.dpy.XSetInputFocus(self.clients[self.focused.get].window, RevertToPointerRoot, CurrentTime)
+    discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window,
+      self.config.borderActivePixel)
+    for i, locClient in self.clients:
+      if uint(i) != self.focused.get: discard self.dpy.XSetWindowBorder(locClient.frame.window,
+            self.config.borderInactivePixel)
     if self.layout == lyTiling: self.tileWindows
   elif ev.messageType == self.ipcAtoms[IpcClientMessage]: # Register events from our IPC-based event system
     if ev.format != 32: return # check we can access the union member
@@ -762,6 +774,18 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
       )
       discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
       self.focused = none uint
+      if self.clients.len == 0: return
+      var lcot = -1
+      for i, c in self.clients:
+        if c.tags == self.tags: lcot = i
+      if lcot == -1: return
+      self.focused = some uint lcot
+      discard self.dpy.XSetInputFocus(self.clients[self.focused.get].window, RevertToPointerRoot, CurrentTime)
+      discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window,
+        self.config.borderActivePixel)
+      for i, locClient in self.clients:
+        if uint(i) != self.focused.get: discard self.dpy.XSetWindowBorder(locClient.frame.window,
+              self.config.borderInactivePixel)
       if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[IpcLayout]:
       # We recieve this IPC event when a client such as wormc wishes to change the layout (eg, floating -> tiling)
