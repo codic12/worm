@@ -486,7 +486,11 @@ proc handleUnmapNotify(self: var Wm; ev: XUnmapEvent): void =
   discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
   self.focused.reset # TODO: focus last window
   if self.clients.len == 0: return
-  self.focused = some uint self.clients.len - 1
+  var lcot = -1
+  for i, c in self.clients:
+    if c.tags == self.tags: lcot = i
+  if lcot == -1: return
+  self.focused = some uint lcot
   discard self.dpy.XSetInputFocus(self.clients[self.focused.get].window, RevertToPointerRoot, CurrentTime)
   discard self.dpy.XRaiseWindow self.clients[self.focused.get].frame.window
   discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window,
@@ -506,7 +510,11 @@ proc handleDestroyNotify(self: var Wm; ev: XDestroyWindowEvent): void =
   discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
   self.focused.reset # TODO: focus last window
   if self.clients.len == 0: return
-  self.focused = some uint self.clients.len - 1
+  var lcot = -1
+  for i, c in self.clients:
+    if c.tags == self.tags: lcot = i
+  if lcot == -1: return
+  self.focused = some uint lcot
   discard self.dpy.XSetInputFocus(self.clients[self.focused.get].window, RevertToPointerRoot, CurrentTime)
   discard self.dpy.XRaiseWindow self.clients[self.focused.get].frame.window
   discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window,
@@ -613,6 +621,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
       cast[cstring](unsafeAddr numdesk),
       1
     )
+    discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
     if self.layout == lyTiling: self.tileWindows
   elif ev.messageType == self.ipcAtoms[IpcClientMessage]: # Register events from our IPC-based event system
     if ev.format != 32: return # check we can access the union member
@@ -750,6 +759,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         cast[cstring](unsafeAddr numdesk),
         1
       )
+      discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
       if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[IpcLayout]:
       # We recieve this IPC event when a client such as wormc wishes to change the layout (eg, floating -> tiling)
