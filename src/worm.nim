@@ -205,6 +205,8 @@ proc newWm: Wm =
               layout: lyFloating) # The default configuration is reasonably sane, and for now based on the Iceberg colorscheme. It may be changed later; it's recommended for users to write their own.
 
 proc eventLoop(self: var Wm): void =
+  if fileExists expandTilde "~/.config/worm/rc":
+    discard startProcess expandTilde "~/.config/worm/rc"
   while true:
     discard self.dpy.XNextEvent(unsafeAddr self.currEv)
     self.dispatchEvent self.currEv
@@ -502,7 +504,7 @@ proc handleDestroyNotify(self: var Wm; ev: XDestroyWindowEvent): void =
   discard self.dpy.XSetInputFocus(self.clients[self.clients.len - 1].window, RevertToPointerRoot, CurrentTime)
   discard self.dpy.XRaiseWindow self.clients[self.clients.len - 1].frame.window
   if self.layout == lyTiling: self.tileWindows
-  
+
 proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
   if ev.messageType == self.netAtoms[NetWMState]:
     let clientOpt = self.findClient do (client: Client) ->
@@ -1061,8 +1063,6 @@ proc tileWindows(self: var Wm): void =
     self.renderTop self.clients[i]
 
 proc main: void =
-  if fileExists expandTilde "~/.config/worm/rc":
-    discard startProcess expandTilde "~/.config/worm/rc"
   log "Starting Worm v0.2 (rewrite)"
   var wm = newWm()
   wm.eventLoop
