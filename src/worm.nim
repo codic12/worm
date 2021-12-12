@@ -486,8 +486,14 @@ proc handleUnmapNotify(self: var Wm; ev: XUnmapEvent): void =
   discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
   self.focused.reset # TODO: focus last window
   if self.clients.len == 0: return
-  discard self.dpy.XSetInputFocus(self.clients[self.clients.len - 1].window, RevertToPointerRoot, CurrentTime)
-  discard self.dpy.XRaiseWindow self.clients[self.clients.len - 1].frame.window
+  self.focused = some uint self.clients.len - 1
+  discard self.dpy.XSetInputFocus(self.clients[self.focused.get].window, RevertToPointerRoot, CurrentTime)
+  discard self.dpy.XRaiseWindow self.clients[self.focused.get].frame.window
+  discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window,
+        self.config.borderActivePixel)
+  for i, locClient in self.clients:
+    if uint(i) != self.focused.get: discard self.dpy.XSetWindowBorder(locClient.frame.window,
+          self.config.borderInactivePixel)
   if self.layout == lyTiling: self.tileWindows
   self.updateTagState
 
