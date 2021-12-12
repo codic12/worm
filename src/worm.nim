@@ -495,7 +495,6 @@ proc handleUnmapNotify(self: var Wm; ev: XUnmapEvent): void =
     if uint(i) != self.focused.get: discard self.dpy.XSetWindowBorder(locClient.frame.window,
           self.config.borderInactivePixel)
   if self.layout == lyTiling: self.tileWindows
-  self.updateTagState
 
 proc handleDestroyNotify(self: var Wm; ev: XDestroyWindowEvent): void =
   let clientOpt = self.findClient do (client: Client) -> bool: client.window == ev.window
@@ -507,10 +506,15 @@ proc handleDestroyNotify(self: var Wm; ev: XDestroyWindowEvent): void =
   discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
   self.focused.reset # TODO: focus last window
   if self.clients.len == 0: return
-  discard self.dpy.XSetInputFocus(self.clients[self.clients.len - 1].window, RevertToPointerRoot, CurrentTime)
-  discard self.dpy.XRaiseWindow self.clients[self.clients.len - 1].frame.window
+  self.focused = some uint self.clients.len - 1
+  discard self.dpy.XSetInputFocus(self.clients[self.focused.get].window, RevertToPointerRoot, CurrentTime)
+  discard self.dpy.XRaiseWindow self.clients[self.focused.get].frame.window
+  discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window,
+        self.config.borderActivePixel)
+  for i, locClient in self.clients:
+    if uint(i) != self.focused.get: discard self.dpy.XSetWindowBorder(locClient.frame.window,
+          self.config.borderInactivePixel)
   if self.layout == lyTiling: self.tileWindows
-  self.updateTagState
 
 proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
   if ev.messageType == self.netAtoms[NetWMState]:
@@ -1197,7 +1201,7 @@ proc renderTop(self: var Wm; client: var Client): void =
           ptr char](cstring client.title), cint client.title.len)
     of fpClose:
       closeExists = true
-      if not fileExists self.config.closePath: continue
+      # if not fileExists self.config.closePath: continue
       var
         screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
       let buttonColor = cast[array[3, uint8]](self.config.framePixel)
