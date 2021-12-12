@@ -25,7 +25,9 @@ proc main: void =
         clong params[i+1].parseInt, 0, 0, 0]
     of "border-width": data = [clong ipcAtoms[IpcBorderWidth],
         clong params[i+1].parseInt, 0, 0, 0]
-    of "frame-pixel": data = [clong ipcAtoms[IpcFramePixel],
+    of "frame-active-pixel": data = [clong ipcAtoms[IpcFrameActivePixel],
+        clong params[i+1].parseInt, 0, 0, 0]
+    of "frame-inactive-pixel": data = [clong ipcAtoms[IpcFrameInactivePixel],
         clong params[i+1].parseInt, 0, 0, 0]
     of "frame-height": data = [clong ipcAtoms[IpcFrameHeight],
         clong params[i+1].parseInt, 0, 0, 0]

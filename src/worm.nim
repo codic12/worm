@@ -36,7 +36,7 @@ type
     tags: TagSet
   Config = object
     borderActivePixel, borderInactivePixel, borderWidth: uint
-    framePixel, frameHeight: uint
+    frameActivePixel, frameInactivePixel, frameHeight: uint
     textPixel: uint
     textOffset, buttonOffset: tuple[x, y: uint]
     gaps: int # TODO: fix the type errors and change this to unsigned integers.
@@ -198,7 +198,7 @@ proc newWm: Wm =
       netAtoms: netAtoms, ipcAtoms: getIpcAtoms dpy, config: Config(
           borderActivePixel: 0x7499CC, borderInactivePixel: 0x000000,
           borderWidth: 1,
-          framePixel: 0x161821, frameHeight: 30,
+          frameActivePixel: 0x161821, frameInactivePixel: 0x666666, frameHeight: 30,
           textPixel: 0xffffff, textOffset: (x: uint 10, y: uint 20), gaps: 0, buttonSize: 14,
               struts: (top: uint 10, bottom: uint 40, left: uint 10,
               right: uint 10)), tags: defaultTagSet(),
@@ -290,9 +290,23 @@ proc handleButtonPress(self: var Wm; ev: XButtonEvent): void =
   self.focused = some clientOpt.get[1]
   discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window,
       self.config.borderActivePixel)
-  for i, client in self.clients:
-    if (self.focused.isSome and uint(i) != self.focused.get) or self.focused.isNone: discard self.dpy.XSetWindowBorder(client.frame.window,
-            self.config.borderInactivePixel)
+  for win in [
+    self.clients[self.focused.get].frame.window,
+    self.clients[self.focused.get].frame.top,
+    self.clients[self.focused.get].frame.title,
+    self.clients[self.focused.get].frame.close,
+    self.clients[self.focused.get].frame.maximize
+  ]:
+    discard self.dpy.XSetWindowBackground(win, self.config.frameActivePixel)
+    discard self.dpy.XSync false
+    discard self.dpy.XFlush
+  for i, client in self.clients.mpairs:
+    if self.focused.get.int == i: continue
+    discard self.dpy.XSetWindowBorder(client.frame.window,
+          self.config.borderInactivePixel)
+    for window in [client.frame.top,client.frame.title,client.frame.window,client.frame.close,client.frame.maximize]:
+      discard self.dpy.XSetWindowBackground(window, self.config.frameInactivePixel)
+    self.renderTop client
 
 proc handleButtonRelease(self: var Wm; ev: XButtonEvent): void =
   #if ev.subwindow == None or ev.window == self.root: return
@@ -366,7 +380,7 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
           NetWMWindowTypeNotification]}:
     discard self.dpy.XMapWindow ev.window
     return # Don't manage irregular windows
-  var frameAttr = XSetWindowAttributes(backgroundPixel: culong self.config.framePixel,
+  var frameAttr = XSetWindowAttributes(backgroundPixel: culong self.config.frameActivePixel,
       borderPixel: self.config.borderActivePixel, colormap: attr.colormap)
   let frame = self.dpy.XCreateWindow(self.root, attr.x, attr.y,
       cuint attr.width, cuint attr.height + cint self.config.frameHeight,
@@ -632,9 +646,9 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
     discard self.dpy.XSetInputFocus(self.clients[self.focused.get].window, RevertToPointerRoot, CurrentTime)
     discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window,
       self.config.borderActivePixel)
-    for i, locClient in self.clients:
-      if uint(i) != self.focused.get: discard self.dpy.XSetWindowBorder(locClient.frame.window,
-            self.config.borderInactivePixel)
+    for i, locClient in self.clients.mpairs:
+      if uint(i) != self.focused.get: discard self.dpy.XSetWindowBorder(locClient.frame.window, self.config.borderInactivePixel)
+      self.renderTop locClient
     if self.layout == lyTiling: self.tileWindows
   elif ev.messageType == self.ipcAtoms[IpcClientMessage]: # Register events from our IPC-based event system
     if ev.format != 32: return # check we can access the union member
@@ -673,13 +687,25 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
           cast[cstring](unsafeAddr extents),
           4
         )
-    elif ev.data.l[0] == clong self.ipcAtoms[IpcFramePixel]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcFrameInactivePixel]:
       log "Changing frame pixel to " & $ev.data.l[1]
-      self.config.framePixel = uint ev.data.l[1]
-      for client in self.clients:
-        for window in [client.frame.window,
-            client.frame.top]: discard self.dpy.XSetWindowBackground(window,
-            cuint self.config.framePixel)
+      self.config.frameInactivePixel = uint ev.data.l[1]
+      for i, client in self.clients:
+        if self.focused.isSome and i == self.focused.get.int: return
+        for window in [client.frame.top,client.frame.title,client.frame.window,client.frame.close,client.frame.maximize]: discard self.dpy.XSetWindowBackground(window,
+            cuint self.config.frameInactivePixel)
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcFrameActivePixel]:
+      log "Changing frame pixel to " & $ev.data.l[1]
+      self.config.frameActivePixel = uint ev.data.l[1]
+      if self.focused.isNone: return
+      for win in [
+        self.clients[self.focused.get].frame.window,
+        self.clients[self.focused.get].frame.top,
+        self.clients[self.focused.get].frame.title,
+        self.clients[self.focused.get].frame.close,
+        self.clients[self.focused.get].frame.maximize
+      ]: discard self.dpy.XSetWindowBackground(win,
+            cuint self.config.frameActivePixel)
     elif ev.data.l[0] == clong self.ipcAtoms[IpcFrameHeight]:
       log "Changing frame height to " & $ev.data.l[1]
       self.config.frameHeight = uint ev.data.l[1]
@@ -783,9 +809,10 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
       discard self.dpy.XSetInputFocus(self.clients[self.focused.get].window, RevertToPointerRoot, CurrentTime)
       discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window,
         self.config.borderActivePixel)
-      for i, locClient in self.clients:
+      for i, locClient in self.clients.mpairs:
         if uint(i) != self.focused.get: discard self.dpy.XSetWindowBorder(locClient.frame.window,
               self.config.borderInactivePixel)
+        self.renderTop locClient
       if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[IpcLayout]:
       # We recieve this IPC event when a client such as wormc wishes to change the layout (eg, floating -> tiling)
@@ -1125,7 +1152,8 @@ proc renderTop(self: var Wm; client: var Client): void =
   var gcVal: XGCValues
   gc = self.dpy.XCreateGC(client.frame.close, 0, addr gcVal)
   discard self.dpy.XSetForeground(gc, self.config.textPixel)
-  discard self.dpy.XSetBackground(gc, self.config.framePixel)
+  let fp = if self.focused.isSome and client == self.clients[self.focused.get]: self.config.frameActivePixel else: self.config.frameInactivePixel
+  discard self.dpy.XSetBackground(gc, fp)
   var
     bw: cuint
     bh: cuint
@@ -1168,7 +1196,7 @@ proc renderTop(self: var Wm; client: var Client): void =
             else: 0), self.config.buttonOffset.y.cint)
       var
         screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
-      let buttonColor = cast[array[3, uint8]](self.config.framePixel)
+      let buttonColor = cast[array[3, uint8]](fp)
       screen.fill(rgba(buttonColor[2],buttonColor[1],buttonColor[0],255))
       let img = readImage(self.config.closePath)
       screen.draw(
@@ -1205,7 +1233,7 @@ proc renderTop(self: var Wm; client: var Client): void =
             else: 0), self.config.buttonOffset.y.cint)
       var
         screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
-      let buttonColor = cast[array[3, uint8]](self.config.framePixel)
+      let buttonColor = cast[array[3, uint8]](fp)
       screen.fill(rgba(buttonColor[2],buttonColor[1],buttonColor[0],255))
       let img = readImage(self.config.maximizePath)
       screen.draw(
@@ -1240,7 +1268,7 @@ proc renderTop(self: var Wm; client: var Client): void =
       # if not fileExists self.config.closePath: continue
       var
         screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
-      let buttonColor = cast[array[3, uint8]](self.config.framePixel)
+      let buttonColor = cast[array[3, uint8]](fp)
       screen.fill(rgba(buttonColor[2],buttonColor[1],buttonColor[0],255))
       let img = readImage(self.config.closePath)
       screen.draw(
@@ -1304,7 +1332,7 @@ proc renderTop(self: var Wm; client: var Client): void =
           else: 0) + (attr.width div 2), self.config.buttonOffset.y.cint)
       var
         screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
-      let buttonColor = cast[array[3, uint8]](self.config.framePixel)
+      let buttonColor = cast[array[3, uint8]](fp)
       screen.fill(rgba(buttonColor[2],buttonColor[1],buttonColor[0],255))
       let img = readImage(self.config.maximizePath)
       screen.draw(
@@ -1349,7 +1377,7 @@ proc renderTop(self: var Wm; client: var Client): void =
       if not fileExists self.config.closePath: continue
       var
         screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
-      let buttonColor = cast[array[3, uint8]](self.config.framePixel)
+      let buttonColor = cast[array[3, uint8]](fp)
       screen.fill(rgba(buttonColor[2], buttonColor[1], buttonColor[0], 255))
       let img = readImage(self.config.closePath)
       screen.draw(
@@ -1416,7 +1444,7 @@ proc renderTop(self: var Wm; client: var Client): void =
             else: 0) + (attr.width) - self.config.buttonSize.cint, self.config.buttonOffset.y.cint)
       var
         screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
-      let buttonColor = cast[array[3, uint8]](self.config.framePixel)
+      let buttonColor = cast[array[3, uint8]](fp)
       screen.fill(rgba(buttonColor[2],buttonColor[1],buttonColor[0],255))
       let img = readImage(self.config.maximizePath)
       screen.draw(
