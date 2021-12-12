@@ -622,6 +622,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
       1
     )
     discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
+    self.focused = none uint
     if self.layout == lyTiling: self.tileWindows
   elif ev.messageType == self.ipcAtoms[IpcClientMessage]: # Register events from our IPC-based event system
     if ev.format != 32: return # check we can access the union member
@@ -760,6 +761,7 @@ proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
         1
       )
       discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
+      self.focused = none uint
       if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[IpcLayout]:
       # We recieve this IPC event when a client such as wormc wishes to change the layout (eg, floating -> tiling)
