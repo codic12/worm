@@ -502,18 +502,8 @@ proc handleUnmapNotify(self: var Wm; ev: XUnmapEvent): void =
   self.updateClientList
   discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
   self.focused.reset # TODO: focus last window
-  if self.clients.len == 0: return
-  var lcot = -1
-  for i, c in self.clients:
-    if c.tags == self.tags: lcot = i
-  if lcot == -1: return
-  self.focused = some uint lcot
-  discard self.dpy.XSetInputFocus(self.clients[self.focused.get].window, RevertToPointerRoot, CurrentTime)
-  discard self.dpy.XRaiseWindow self.clients[self.focused.get].frame.window
-  discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window,
-        self.config.borderActivePixel)
   for i, locClient in self.clients:
-    if uint(i) != self.focused.get: discard self.dpy.XSetWindowBorder(locClient.frame.window,
+    discard self.dpy.XSetWindowBorder(locClient.frame.window,
           self.config.borderInactivePixel)
   if self.layout == lyTiling: self.tileWindows
 
@@ -526,21 +516,11 @@ proc handleDestroyNotify(self: var Wm; ev: XDestroyWindowEvent): void =
   self.updateClientList
   discard self.dpy.XSetInputFocus(self.root, RevertToPointerRoot, CurrentTime)
   self.focused.reset # TODO: focus last window
-  if self.clients.len == 0: return
-  var lcot = -1
-  for i, c in self.clients:
-    if c.tags == self.tags: lcot = i
-  if lcot == -1: return
-  self.focused = some uint lcot
-  discard self.dpy.XSetInputFocus(self.clients[self.focused.get].window, RevertToPointerRoot, CurrentTime)
-  discard self.dpy.XRaiseWindow self.clients[self.focused.get].frame.window
-  discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window,
-        self.config.borderActivePixel)
   for i, locClient in self.clients:
-    if uint(i) != self.focused.get: discard self.dpy.XSetWindowBorder(locClient.frame.window,
+    discard self.dpy.XSetWindowBorder(locClient.frame.window,
           self.config.borderInactivePixel)
   if self.layout == lyTiling: self.tileWindows
-
+  
 proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void =
   if ev.messageType == self.netAtoms[NetWMState]:
     let clientOpt = self.findClient do (client: Client) ->
