@@ -298,6 +298,7 @@ proc handleButtonPress(self: var Wm; ev: XButtonEvent): void =
     self.clients[self.focused.get].frame.maximize
   ]:
     discard self.dpy.XSetWindowBackground(win, self.config.frameActivePixel)
+    self.renderTop self.clients[self.focused.get]
     discard self.dpy.XSync false
     discard self.dpy.XFlush
   for i, client in self.clients.mpairs:
@@ -307,6 +308,8 @@ proc handleButtonPress(self: var Wm; ev: XButtonEvent): void =
     for window in [client.frame.top,client.frame.title,client.frame.window,client.frame.close,client.frame.maximize]:
       discard self.dpy.XSetWindowBackground(window, self.config.frameInactivePixel)
     self.renderTop client
+    discard self.dpy.XSync false
+    discard self.dpy.XFlush
 
 proc handleButtonRelease(self: var Wm; ev: XButtonEvent): void =
   #if ev.subwindow == None or ev.window == self.root: return
