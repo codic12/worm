@@ -443,8 +443,12 @@ proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void =
         Mod2Mask or LockMask or Mod3Mask]:
     for win in [close, maximize]: discard self.dpy.XGrabButton(1, mask, win, true, ButtonPressMask or
         PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None)
-  discard self.dpy.XGrabButton(1, 0, ev.window, true, ButtonPressMask,
-      GrabModeSync, GrabModeSync, None, None)
+  for mask in [uint32 0, Mod2Mask, LockMask,
+         Mod3Mask, Mod2Mask or LockMask,
+        LockMask or Mod3Mask, Mod2Mask or Mod3Mask,
+        Mod2Mask or LockMask or Mod3Mask]:
+    discard self.dpy.XGrabButton(1, mask, ev.window, true, ButtonPressMask,
+        GrabModeSync, GrabModeSync, None, None)
   self.clients.add Client(window: ev.window, frame: Frame(window: frame,
       top: top, close: close, maximize: maximize, title: titleWin), draw: draw, color: color,
       title: $title, tags: self.tags, floating: self.layout == lyFloating)
