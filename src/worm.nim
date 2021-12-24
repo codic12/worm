@@ -363,6 +363,9 @@ proc handleMotionNotify(self: var Wm; ev: XMotionEvent): void =
   discard self.dpy.XResizeWindow(client.frame.top, 1.max(
       motionInfo.attr.width + (if motionInfo.start.button ==
       3: xdiff else: 0)).cuint, cuint self.config.frameHeight)
+  discard self.dpy.XResizeWindow(client.frame.title, 1.max(
+      motionInfo.attr.width + (if motionInfo.start.button ==
+      3: xdiff else: 0)).cuint, cuint self.config.frameHeight)
   # if motionInfo.attr.y + (if motionInfo.start.button == 1: ydiff else: 0) <= 0: # snapping which doesn't really work properly
   #   var scrNo: cint
   #   var scrInfo = cast[ptr UncheckedArray[XineramaScreenInfo]](self.dpy.XineramaQueryScreens(addr scrNo))
