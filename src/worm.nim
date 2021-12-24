@@ -1257,7 +1257,7 @@ proc renderTop(self: var Wm; client: var Client): void =
           ptr char](cstring client.title), cint client.title.len)
     of fpClose:
       closeExists = true
-      # if not fileExists self.config.closePath: continue
+      if not fileExists self.config.closePath: continue
       var
         screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
       let buttonColor = cast[array[3, uint8]](fp)
