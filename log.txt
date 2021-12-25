@@ -1,27 +1,0 @@
-Welcome to fish, the friendly interactive shell
-Type [32mhelp(B[m for instructions on how to use fish
-[?2004h]7;file://vostro-linux/home/user/worm]0;fish /home/user/worm[30m(B[m[92muser(B[m@(B[mvostro-linux(B[m [32m~/worm(B[m (main)(B[m> [K[33CD[34C[38;2;255;0;0mD[34C[30m(B[m[38;2;85;85;85mISPLAY=:2 nimble run --bin worm[34C[30m(B[m[38;2;255;0;0mI[38;2;85;85;85mSPLAY=:2 nimble run --bin worm[35C[30m(B[m[38;2;255;0;0mS[38;2;85;85;85mPLAY=:2 nimble run --bin worm[36C[30m(B[m[38;2;255;0;0mP[38;2;85;85;85mLAY=:2 nimble run --bin worm[37C[30m(B[m[38;2;255;0;0mL[38;2;85;85;85mAY=:2 nimble run --bin worm[38C[30m(B[m[38;2;255;0;0mA[38;2;85;85;85mY=:2 nimble run --bin worm[39C[30m(B[m[38;2;255;0;0mn[30m(B[m[K[40C[38;2;255;0;0mi[41C[30m(B[m[38;2;255;0;0mm[42C[30m(B[m[38;2;255;0;0mb[43C[30m(B[m
-[30m(B[m[?2004l]0;DISPLAnimb /home/user/worm[30m(B[mfish: Unknown command: DISPLAnimb
-[2m⏎(B[m                                                                               ⏎ [K[?2004h]0;fish /home/user/worm[30m(B[m[92muser(B[m@(B[mvostro-linux(B[m [32m~/worm(B[m (main)(B[m (B[m[31m[[1m[31m127(B[m[31m](B[m(B[m> [K[39Cn[40C[38;2;255;0;0mn[40C[30m(B[m[38;2;85;85;85mimlsp[40C[30m(B[m[38;2;255;0;0mi[38;2;85;85;85mmlsp[41C[30m(B[m[38;2;255;0;0mm[38;2;85;85;85mlsp[42C[30m(B[m[38;2;0;95;215mnim[38;2;85;85;85mlsp[42C[30m(B[m[38;2;0;95;215mb[30m(B[m[K[43C[38;2;85;85;85mle install nimlsp[43C[30m(B[m[38;2;255;0;0mnimb[38;2;85;85;85mle install nimlsp[43C[30m(B[m[38;2;255;0;0ml[38;2;85;85;85me install nimlsp[44C[30m(B[m[38;2;255;0;0me[38;2;85;85;85m install nimlsp[45C[30m(B[m[38;2;0;95;215mnimble[38;2;85;85;85m install nimlsp[45C[30m(B[m[38;2;0;95;215m [38;2;85;85;85minstall nimlsp[46C[30m(B[m [38;2;85;85;85minstall nimlsp[46C[30m(B[mb[K[47C[38;2;85;85;85muild[47C[30m(B[m[38;2;0;175;255mb[38;2;85;85;85muild[47C[30m(B[m[38;2;0;175;255mu[38;2;85;85;85mild[48C[30m(B[m[38;2;0;175;255mi[38;2;85;85;85mld[49C[30m(B[m[38;2;0;175;255ml[38;2;85;85;85md[50C[30m(B[m[38;2;0;175;255md[51C[30m(B[m[51C
-[30m(B[m[?2004l]0;nimble build /home/user/worm[30m(B[m[36m[1m  Verifying [0m[0mdependencies for worm@0.1.0
-[36m[1m      Info: [0m[0mDependency on x11@any version already satisfied
-[36m[1m  Verifying [0m[0mdependencies for x11@1.1
-[36m[1m      Info: [0m[0mDependency on pixie@any version already satisfied
-[36m[1m  Verifying [0m[0mdependencies for pixie@3.1.2
-[36m[1m      Info: [0m[0mDependency on vmath@>= 1.1.0 already satisfied
-[36m[1m  Verifying [0m[0mdependencies for vmath@1.1.1
-[36m[1m      Info: [0m[0mDependency on chroma@>= 0.2.5 already satisfied
-[36m[1m  Verifying [0m[0mdependencies for chroma@0.2.5
-[36m[1m      Info: [0m[0mDependency on zippy@>= 0.6.2 already satisfied
-[36m[1m  Verifying [0m[0mdependencies for zippy@0.7.3
-[36m[1m      Info: [0m[0mDependency on flatty@>= 0.2.2 already satisfied
-[36m[1m  Verifying [0m[0mdependencies for flatty@0.2.3
-[36m[1m      Info: [0m[0mDependency on nimsimd@>= 1.0.0 already satisfied
-[36m[1m  Verifying [0m[0mdependencies for nimsimd@1.0.0
-[36m[1m      Info: [0m[0mDependency on bumpy@>= 1.0.3 already satisfied
-[36m[1m  Verifying [0m[0mdependencies for bumpy@1.0.3
-[36m[1m      Info: [0m[0mDependency on vmath@>= 1.0.0 already satisfied
-[36m[1m  Verifying [0m[0mdependencies for vmath@1.1.1
-[36m[1m   Building [0m[0mworm/wormc using c backend
-[36m[1m   Building [0m[0mworm/worm using c backend
-[2m⏎(B[m                                                                               ⏎ [K[?2004h]0;fish /home/user/worm[30m(B[m[92muser(B[m@(B[mvostro-linux(B[m [32m~/worm(B[m (main)(B[m> [K[33C
