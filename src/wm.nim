@@ -1,4 +1,4 @@
-import std/[options, os, osproc]
+import std/[options, os, osproc, sequtils]
 import x11/[xlib, x, xft, xatom, xinerama, xrender]
 import types
 import atoms
@@ -40,15 +40,14 @@ type
 proc newWm*: Wm
 proc tileWindows*(self: var Wm): void
 proc renderTop*(self: var Wm; client: var Client): void
-# proc maximizeClient(self: var Wm; client: var Client): void
+proc maximizeClient*(self: var Wm; client: var Client): void
 proc eventLoop*(self: var Wm): void
 proc dispatchEvent*(self: var Wm; ev: XEvent): void
-# func findClient(self: var Wm; predicate: proc(client: Client): bool): Option[(
-#     ptr Client, uint)]
-# proc updateClientList(self: Wm): void
-# proc updateTagState(self: Wm): void
-import events/configurerequest
-
+func findClient*(self: var Wm; predicate: proc(client: Client): bool): Option[(
+    ptr Client, uint)]
+proc updateClientList*(self: Wm): void
+proc updateTagState*(self: Wm): void
+import events/[buttonpress, buttonrelease, clientmessage, configurenotify, configurerequest, destroynotify, expose, maprequest, motionnotify, propertynotify, unmapnotify]
 proc newWm*: Wm =
   let dpy = XOpenDisplay nil
   if dpy == nil: quit 1
@@ -135,6 +134,13 @@ proc newWm*: Wm =
               struts: (top: uint 10, bottom: uint 40, left: uint 10,
               right: uint 10)), tags: defaultTagSet(),
               layout: lyFloating) # The default configuration is reasonably sane, and for now based on the Iceberg colorscheme. It may be changed later; it's recommended for users to write their own.
+
+func findClient*(self: var Wm; predicate: proc(client: Client): bool): Option[(
+    ptr Client, uint)] =
+  for i, client in self.clients:
+    if predicate client:
+      return some((addr self.clients[i], uint i))
+  return none((ptr Client, uint))
 
 proc tileWindows*(self: var Wm): void =
   log "Tiling windows"
@@ -544,6 +550,47 @@ proc renderTop*(self: var Wm; client: var Client): void =
           frameBuffer), self.config.buttonSize.cuint, self.config.buttonSize.cuint, 8, cint(self.config.buttonSize*4))
       discard XPutImage(self.dpy, client.frame.maximize, gc, image, 0, 0, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint)
 
+proc maximizeClient*(self: var Wm; client: var Client): void =
+  # maximize the provided client
+  var scrNo: cint
+  var scrInfo = cast[ptr UncheckedArray[XineramaScreenInfo]](
+      self.dpy.XineramaQueryScreens(addr scrNo))
+  let masterWidth =
+    uint scrInfo[0].width -
+        (self.config.struts.left.cint + self.config.struts.right.cint + cint self.config.borderWidth*2)
+  discard self.dpy.XMoveResizeWindow(client.frame.window,
+      cint self.config.struts.left, cint self.config.struts.top,
+      cuint masterWidth, cuint scrInfo[0].height -
+      self.config.struts.top.int16 - self.config.struts.bottom.int16 -
+      cint self.config.borderWidth*2)
+  discard self.dpy.XResizeWindow(client.window, cuint masterWidth,
+      cuint scrInfo[0].height - self.config.struts.top.cint -
+      self.config.struts.bottom.cint - self.config.frameHeight.cint -
+      cint self.config.borderWidth*2)
+  self.renderTop client
+  
+proc updateClientList(self: Wm): void =
+  let wins = self.clients.map do (client: Client) ->
+      Window: client.window # Retrieve all the underlying X11 windows from the client list.
+  if wins.len == 0: return
+  discard self.dpy.XChangeProperty(
+    self.root,
+    self.netAtoms[NetClientList],
+    XaWindow,
+    32,
+    PropModeReplace,
+    cast[cstring](unsafeAddr wins[0]),
+    cint wins.len
+  )
+
+proc updateTagState*(self: Wm): void =
+  for client in self.clients:
+    for i, tag in client.tags:
+      if self.tags[i] and tag:
+        discard self.dpy.XMapWindow client.frame.window
+        break
+      discard self.dpy.XUnmapWindow client.frame.window
+
 proc eventLoop*(self: var Wm): void =
   if fileExists expandTilde "~/.config/worm/rc":
     discard startProcess expandTilde "~/.config/worm/rc"
@@ -553,15 +600,16 @@ proc eventLoop*(self: var Wm): void =
 
 proc dispatchEvent*(self: var Wm; ev: XEvent): void =
   case ev.theType:
-  #of ButtonPress: self.handleButtonPress ev.xbutton
-  #of ButtonRelease: self.handleButtonRelease ev.xbutton
-  #of MotionNotify: self.handleMotionNotify ev.xmotion
-  #of MapRequest: self.handleMapRequest ev.xmaprequest
+  of ButtonPress: self.handleButtonPress ev.xbutton
+  of ButtonRelease: self.handleButtonRelease ev.xbutton
+  of MotionNotify: self.handleMotionNotify ev.xmotion
+  of MapRequest: self.handleMapRequest ev.xmaprequest
   of ConfigureRequest: self.handleConfigureRequest ev.xconfigurerequest
-  #of ConfigureNotify: self.handleConfigureNotify ev.xconfigure
-  #of UnmapNotify: self.handleUnmapNotify ev.xunmap
-  #of DestroyNotify: self.handleDestroyNotify ev.xdestroywindow
-  #of ClientMessage: self.handleClientMessage ev.xclient
-  #of Expose: self.handleExpose ev.xexpose
-  #of PropertyNotify: self.handlePropertyNotify ev.xproperty
+  of ConfigureNotify: self.handleConfigureNotify ev.xconfigure
+  of UnmapNotify: self.handleUnmapNotify ev.xunmap
+  of DestroyNotify: self.handleDestroyNotify ev.xdestroywindow
+  of ClientMessage: self.handleClientMessage ev.xclient
+  of Expose: self.handleExpose ev.xexpose
+  of PropertyNotify: self.handlePropertyNotify ev.xproperty
   else: discard
+  
