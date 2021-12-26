@@ -194,15 +194,28 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
           cast[cstring](unsafeAddr extents),
           4
         )
-    elif ev.data.l[0] == clong self.ipcAtoms[IpcTextPixel]:
-      log "Chaging text pixel to " & $ev.data.l[1]
-      self.config.textPixel = uint ev.data.l[1]
-      for client in mitems self.clients:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcTextActivePixel]:
+      log "Chaging text active pixel to " & $ev.data.l[1]
+      self.config.textActivePixel = uint ev.data.l[1]
+      if self.focused.isNone: return
+      var client = self.clients[self.focused.get]
+      var attr: XWindowAttributes
+      discard self.dpy.XGetWindowAttributes(client.window, addr attr)
+      var color: XftColor
+      discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring(
+          "#" & self.config.textActivePixel.toHex 6), addr color)
+      client.color = color
+      self.renderTop client
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcTextInactivePixel]:
+      log "Chaging text inactive pixel to " & $ev.data.l[1]
+      self.config.textInactivePixel = uint ev.data.l[1]
+      for i, client in mpairs self.clients:
+        if self.focused.isSome and i == int self.focused.get: continue
         var attr: XWindowAttributes
         discard self.dpy.XGetWindowAttributes(client.window, addr attr)
         var color: XftColor
         discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring(
-            "#" & self.config.textPixel.toHex 6), addr color)
+            "#" & self.config.textActivePixel.toHex 6), addr color)
         client.color = color
         self.renderTop client
     elif ev.data.l[0] == clong self.ipcAtoms[IpcTextFont]:
@@ -456,4 +469,3 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
       if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
-

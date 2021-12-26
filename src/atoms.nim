@@ -19,7 +19,7 @@ type
         NetDesktopNames, NetFrameExtents
   IpcAtom* = enum
     IpcClientMessage, IpcBorderActivePixel, IpcBorderInactivePixel,
-        IpcBorderWidth, IpcFrameActivePixel, IpcFrameInactivePixel, IpcFrameHeight, IpcTextPixel,
+        IpcBorderWidth, IpcFrameActivePixel, IpcFrameInactivePixel, IpcFrameHeight, IpcTextActivePixel, IpcTextInactivePixel,
             IpcTextFont, IpcTextOffset, IpcKillClient, IpcCloseClient, IpcSwitchTag, IpcLayout, IpcGaps, IpcMaster, IpcStruts,
                 IpcMoveTag, IpcFrameLeft, IpcFrameCenter, IpcFrameRight,
                 IpcFloat, IpcButtonOffset, IpcButtonSize, IpcRootMenu, IpcClosePath, IpcMaximizePath, IpcMaximizeClient
@@ -70,7 +70,8 @@ func getIpcAtoms*(dpy: ptr Display): array[IpcAtom, Atom] =
     dpy.XInternAtom("WORM_IPC_FRAME_ACTIVE_PIXEL", false),
     dpy.XInternAtom("WORM_IPC_FRAME_INACTIVE_PIXEL", false),
     dpy.XInternAtom("WORM_IPC_FRAME_HEIGHT", false),
-    dpy.XInternAtom("WORM_IPC_TEXT_PIXEL", false),
+    dpy.XInternAtom("WORM_IPC_TEXT_ACTIVE_PIXEL", false),
+    dpy.XInternAtom("WORM_IPC_TEXT_INACTIVE_PIXEL", false),
     dpy.XInternAtom("WORM_IPC_TEXT_FONT", false),
     dpy.XInternAtom("WORM_IPC_TEXT_OFFSET", false),
     dpy.XInternAtom("WORM_IPC_KILL_CLIENT", false),

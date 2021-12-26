@@ -75,7 +75,7 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
   let draw = self.dpy.XftDrawCreate(titleWin, attr.visual, attr.colormap)
   var color: XftColor
   discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring("#" &
-      self.config.textPixel.toHex 6), addr color)
+      self.config.textActivePixel.toHex 6), addr color)
   var title = block:
     var atr: Atom
     var afr: cint

@@ -130,7 +130,7 @@ proc newWm*: Wm =
           borderActivePixel: 0x7499CC, borderInactivePixel: 0x000000,
           borderWidth: 1,
           frameActivePixel: 0x161821, frameInactivePixel: 0x666666, frameHeight: 30,
-          textPixel: 0xffffff, textOffset: (x: uint 10, y: uint 20), gaps: 0, buttonSize: 14,
+          textActivePixel: 0xffffff, textInactivePixel: 0x000000, textOffset: (x: uint 10, y: uint 20), gaps: 0, buttonSize: 14,
               struts: (top: uint 10, bottom: uint 40, left: uint 10,
               right: uint 10)), tags: defaultTagSet(),
               layout: lyFloating) # The default configuration is reasonably sane, and for now based on the Iceberg colorscheme. It may be changed later; it's recommended for users to write their own.
@@ -185,9 +185,12 @@ proc tileWindows*(self: var Wm): void =
     if clientLen == 2:
       discard self.dpy.XMoveWindow(client.frame.window, cint scrInfo[
           0].width shr 1 + self.config.gaps, cint self.config.struts.top)
-      discard self.dpy.XResizeWindow(client.window, cuint scrInfo[0].width shr (
+      let w = cuint scrInfo[0].width shr (
           if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) -
-          self.config.gaps - self.config.struts.right.cint, cuint scrInfo[
+          self.config.gaps - self.config.struts.right.cint
+      discard self.dpy.XResizeWindow(client.frame.top, w, cuint self.config.frameHeight)
+      discard self.dpy.XResizeWindow(client.frame.title, w, cuint self.config.frameHeight)
+      discard self.dpy.XResizeWindow(client.window, w, cuint scrInfo[
           0].height - self.config.struts.top.cint -
           self.config.struts.bottom.cint - self.config.frameHeight.cint -
           cint self.config.borderWidth*2)
@@ -201,15 +204,18 @@ proc tileWindows*(self: var Wm): void =
       # let subStrut = if stackElem = clientLen
       # XXX: the if stackElem == 1: 0 else: self.config.gaps is a huge hack
       # and also incorrect behavior; while usually un-noticeable it makes the top window in the stack bigger by the gaps. Fix this!!
+      let w = cuint scrInfo[0].width shr (
+          if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) -
+          self.config.gaps - self.config.struts.right.cint
+      discard self.dpy.XResizeWindow(client.frame.top, w, cuint self.config.frameHeight)
+      discard self.dpy.XResizeWindow(client.frame.title, w, cuint self.config.frameHeight)
       discard self.dpy.XMoveWindow(client.frame.window, cint scrInfo[
           0].width shr 1 + yGap, cint((float(scrInfo[0].height) - (
           self.config.struts.bottom.float + self.config.struts.top.float)) * ((
           i - int irrevelantLen) / int clientLen - 1)) +
           self.config.struts.top.cint + (if stackElem ==
           1: 0 else: self.config.gaps.cint))
-      discard self.dpy.XResizeWindow(client.window, cuint scrInfo[0].width shr (
-          if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) -
-          self.config.gaps - self.config.struts.right.cint, cuint ((scrInfo[
+      discard self.dpy.XResizeWindow(client.window, w, cuint ((scrInfo[
           0].height - self.config.struts.bottom.cint -
           self.config.struts.top.cint) div int16(clientLen - 1)) - int16(
           self.config.borderWidth*2) - int16(self.config.frameHeight) - (
@@ -231,9 +237,8 @@ proc renderTop*(self: var Wm; client: var Client): void =
   var gc: GC
   var gcVal: XGCValues
   gc = self.dpy.XCreateGC(client.frame.close, 0, addr gcVal)
-  discard self.dpy.XSetForeground(gc, self.config.textPixel)
+  # discard self.dpy.XSetForeground(gc, self.config.textActivePixel)
   let fp = if self.focused.isSome and client == self.clients[self.focused.get]: self.config.frameActivePixel else: self.config.frameInactivePixel
-  discard self.dpy.XSetBackground(gc, fp)
   var
     bw: cuint
     bh: cuint
@@ -248,7 +253,7 @@ proc renderTop*(self: var Wm; client: var Client): void =
   discard self.dpy.XUnmapWindow client.frame.close
   discard self.dpy.XUnmapWindow client.frame.maximize
   # load the image @ path into the frame top at offset (x, y)
-  proc loadImage(path: string; x, y: uint): void = 
+  proc loadImage(path: string; x, y: uint): void =
     discard
   for i, part in self.config.frameParts.left:
     case part:
@@ -307,7 +312,7 @@ proc renderTop*(self: var Wm; client: var Client): void =
       discard self.dpy.XMapWindow client.frame.maximize
       discard self.dpy.XMoveWindow(client.frame.maximize,
           self.config.buttonOffset.x.cint + (
-            if i == 1 and self.config.frameParts.left[0] == fpTitle: 
+            if i == 1 and self.config.frameParts.left[0] == fpTitle:
               extent.width.cint
             elif i == 1 and self.config.frameParts.left[0] == fpClose:
               self.config.buttonSize.cint + self.config.buttonOffset.x.cint
@@ -568,7 +573,7 @@ proc maximizeClient*(self: var Wm; client: var Client): void =
       self.config.struts.bottom.cint - self.config.frameHeight.cint -
       cint self.config.borderWidth*2)
   self.renderTop client
-  
+
 proc updateClientList(self: Wm): void =
   let wins = self.clients.map do (client: Client) ->
       Window: client.window # Retrieve all the underlying X11 windows from the client list.
@@ -612,4 +617,3 @@ proc dispatchEvent*(self: var Wm; ev: XEvent): void =
   of Expose: self.handleExpose ev.xexpose
   of PropertyNotify: self.handlePropertyNotify ev.xproperty
   else: discard
-  

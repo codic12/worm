@@ -31,7 +31,9 @@ proc main: void =
         clong params[i+1].parseInt, 0, 0, 0]
     of "frame-height": data = [clong ipcAtoms[IpcFrameHeight],
         clong params[i+1].parseInt, 0, 0, 0]
-    of "text-pixel": data = [clong ipcAtoms[IpcTextPixel],
+    of "text-active-pixel": data = [clong ipcAtoms[IpcTextActivePixel],
+        clong params[i+1].parseInt, 0, 0, 0]
+    of "text-inactive-pixel": data = [clong ipcAtoms[IpcTextInactivePixel],
         clong params[i+1].parseInt, 0, 0, 0]
     of "gaps": data = [clong ipcAtoms[IpcGaps],
         clong params[i+1].parseInt, 0, 0, 0]

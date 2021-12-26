@@ -28,7 +28,8 @@ type
   Config* = object
     borderActivePixel*, borderInactivePixel*, borderWidth*: uint
     frameActivePixel*, frameInactivePixel*, frameHeight*: uint
-    textPixel*: uint
+    textActivePixel*: uint
+    textInactivePixel*: uint
     textOffset*, buttonOffset*: tuple[x, y: uint]
     gaps*: int # TODO: fix the type errors and change this to unsigned integers.
     struts*: tuple[top, bottom, left, right: uint]

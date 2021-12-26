@@ -1,6 +1,6 @@
-import x11/[xlib, x]
+import x11/[xlib, x, xft]
 import ../wm, ../log, ../types
-import std/[os, options, osproc]
+import std/[os, options, osproc, strutils]
 
 proc handleButtonPress*(self: var Wm; ev: XButtonEvent): void =
   if ev.subwindow == None and ev.window == self.root and ev.button == 3:
@@ -77,13 +77,25 @@ proc handleButtonPress*(self: var Wm; ev: XButtonEvent): void =
     self.renderTop self.clients[self.focused.get]
     discard self.dpy.XSync false
     discard self.dpy.XFlush
+  var fattr: XWindowAttributes
+  discard self.dpy.XGetWindowAttributes(self.clients[self.focused.get].window, addr fattr)
+  var color: XftColor
+  discard self.dpy.XftColorAllocName(fattr.visual, fattr.colormap, cstring(
+      "#" & self.config.textActivePixel.toHex 6), addr color)
+  self.clients[self.focused.get].color = color
+  self.renderTop self.clients[self.focused.get]
   for i, client in self.clients.mpairs:
     if self.focused.get.int == i: continue
     discard self.dpy.XSetWindowBorder(client.frame.window,
           self.config.borderInactivePixel)
     for window in [client.frame.top,client.frame.title,client.frame.window,client.frame.close,client.frame.maximize]:
       discard self.dpy.XSetWindowBackground(window, self.config.frameInactivePixel)
+    var attr: XWindowAttributes
+    discard self.dpy.XGetWindowAttributes(client.window, addr attr)
+    var color: XftColor
+    discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring(
+        "#" & self.config.textInactivePixel.toHex 6), addr color)
+    client.color = color
     self.renderTop client
     discard self.dpy.XSync false
     discard self.dpy.XFlush
-
