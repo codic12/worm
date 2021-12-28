@@ -6,10 +6,6 @@ Worm is a tiny, suckless, dynamic, tag-based window manager written in the Nim l
 It supports both a floating mode and master-stack tiling with gaps and struts.
 Check out the [screenshots on the wiki](https://github.com/codic12/worm/wiki/Screenshots) for some examples of how it looks.
 
-## Docs
-
-The worm docs are located at [here](https://github.com/codic12/worm/tree/main/docs)
-
 ## Build / install
 
 Install Nim >= 1.4.0, for example through Choosenim. Clone this repo and run
@@ -40,7 +36,7 @@ An example can be found [here](/examples/rc).
 
 Worm does not have a built-in keyboard mapper, so you should use something like
 [sxhkd](https://github.com/baskerville/sxhkd).
-Please read [the doc](docs/wormc.md) to understand how wormc works before
+Please read [the docs](docs/wormc.md) to understand how wormc works before
 writing your own sxhkdrc.
 
 An example sxhkdrc can be found [here](/examples/sxhkdrc).
