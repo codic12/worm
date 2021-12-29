@@ -8,7 +8,7 @@ proc handleConfigureNotify*(self: var Wm; ev: XConfigureEvent): void =
   let client = clientOpt.get[0]
   if not client.fullscreen: # and not (ev.x == 0 and ev.y == cint self.config.frameHeight):
     discard self.dpy.XResizeWindow(client.frame.window, cuint ev.width,
-        cuint ev.height + cint self.config.frameHeight)
-    discard self.dpy.XMoveWindow(client.window, 0, cint self.config.frameHeight)
+        cuint ev.height + cint client.frameHeight)
+    discard self.dpy.XMoveWindow(client.window, 0, cint client.frameHeight)
   # if self.layout == lyTiling: self.tileWindows
 

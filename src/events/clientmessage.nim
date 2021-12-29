@@ -110,9 +110,40 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
     discard self.dpy.XSetInputFocus(self.clients[self.focused.get].window, RevertToPointerRoot, CurrentTime)
     discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window,
       self.config.borderActivePixel)
-    for i, locClient in self.clients.mpairs:
-      if uint(i) != self.focused.get: discard self.dpy.XSetWindowBorder(locClient.frame.window, self.config.borderInactivePixel)
-      self.renderTop locClient
+    discard self.dpy.XRaiseWindow self.clients[self.focused.get].frame.window
+    for win in [
+      self.clients[self.focused.get].frame.window,
+      self.clients[self.focused.get].frame.top,
+      self.clients[self.focused.get].frame.title,
+      self.clients[self.focused.get].frame.close,
+      self.clients[self.focused.get].frame.maximize
+    ]:
+      discard self.dpy.XSetWindowBackground(win, self.config.frameActivePixel)
+      self.renderTop self.clients[self.focused.get]
+      discard self.dpy.XSync false
+      discard self.dpy.XFlush
+    var fattr: XWindowAttributes
+    discard self.dpy.XGetWindowAttributes(self.clients[self.focused.get].window, addr fattr)
+    var color: XftColor
+    discard self.dpy.XftColorAllocName(fattr.visual, fattr.colormap, cstring(
+        "#" & self.config.textActivePixel.toHex 6), addr color)
+    self.clients[self.focused.get].color = color
+    self.renderTop self.clients[self.focused.get]
+    for i, client in self.clients.mpairs:
+      if self.focused.get.int == i: continue
+      discard self.dpy.XSetWindowBorder(client.frame.window,
+              self.config.borderInactivePixel)
+      for window in [client.frame.top,client.frame.title,client.frame.window,client.frame.close,client.frame.maximize]:
+        discard self.dpy.XSetWindowBackground(window, self.config.frameInactivePixel)
+      var attr: XWindowAttributes
+      discard self.dpy.XGetWindowAttributes(client.window, addr attr)
+      var color: XftColor
+      discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring(
+          "#" & self.config.textInactivePixel.toHex 6), addr color)
+      client.color = color
+      self.renderTop client
+    discard self.dpy.XSync false
+    discard self.dpy.XFlush
     if self.layout == lyTiling: self.tileWindows
   elif ev.messageType == self.ipcAtoms[IpcClientMessage]: # Register events from our IPC-based event system
     if ev.format != 32: return # check we can access the union member
@@ -173,7 +204,9 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
     elif ev.data.l[0] == clong self.ipcAtoms[IpcFrameHeight]:
       log "Changing frame height to " & $ev.data.l[1]
       self.config.frameHeight = uint ev.data.l[1]
-      for client in self.clients:
+      for client in mitems self.clients:
+        if client.csd: return
+        client.frameHeight = self.config.frameHeight
         var attr: XWindowAttributes
         discard self.dpy.XGetWindowAttributes(client.window, addr attr)
         discard self.dpy.XResizeWindow(client.frame.window, cuint attr.width,
@@ -194,6 +227,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
           cast[cstring](unsafeAddr extents),
           4
         )
+      if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[IpcTextActivePixel]:
       log "Chaging text active pixel to " & $ev.data.l[1]
       self.config.textActivePixel = uint ev.data.l[1]
@@ -284,12 +318,41 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
       if lcot == -1: return
       self.focused = some uint lcot
       discard self.dpy.XSetInputFocus(self.clients[self.focused.get].window, RevertToPointerRoot, CurrentTime)
-      discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window,
-        self.config.borderActivePixel)
-      for i, locClient in self.clients.mpairs:
-        if uint(i) != self.focused.get: discard self.dpy.XSetWindowBorder(locClient.frame.window,
+      discard self.dpy.XRaiseWindow self.clients[self.focused.get].frame.window
+      discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window, self.config.borderActivePixel)
+      for win in [
+        self.clients[self.focused.get].frame.window,
+        self.clients[self.focused.get].frame.top,
+        self.clients[self.focused.get].frame.title,
+        self.clients[self.focused.get].frame.close,
+        self.clients[self.focused.get].frame.maximize
+      ]:
+        discard self.dpy.XSetWindowBackground(win, self.config.frameActivePixel)
+        self.renderTop self.clients[self.focused.get]
+        discard self.dpy.XSync false
+        discard self.dpy.XFlush
+      var fattr: XWindowAttributes
+      discard self.dpy.XGetWindowAttributes(self.clients[self.focused.get].window, addr fattr)
+      var color: XftColor
+      discard self.dpy.XftColorAllocName(fattr.visual, fattr.colormap, cstring(
+          "#" & self.config.textActivePixel.toHex 6), addr color)
+      self.clients[self.focused.get].color = color
+      self.renderTop self.clients[self.focused.get]
+      for i, client in self.clients.mpairs:
+        if self.focused.get.int == i: continue
+        discard self.dpy.XSetWindowBorder(client.frame.window,
               self.config.borderInactivePixel)
-        self.renderTop locClient
+        for window in [client.frame.top,client.frame.title,client.frame.window,client.frame.close,client.frame.maximize]:
+          discard self.dpy.XSetWindowBackground(window, self.config.frameInactivePixel)
+        var attr: XWindowAttributes
+        discard self.dpy.XGetWindowAttributes(client.window, addr attr)
+        var color: XftColor
+        discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring(
+            "#" & self.config.textInactivePixel.toHex 6), addr color)
+        client.color = color
+        self.renderTop client
+        discard self.dpy.XSync false
+        discard self.dpy.XFlush
       if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[IpcLayout]:
       # We recieve this IPC event when a client such as wormc wishes to change the layout (eg, floating -> tiling)

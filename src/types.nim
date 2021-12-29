@@ -25,6 +25,8 @@ type
     fullscreen*: bool # Whether this client is currently fullscreened or not (EWMH, or otherwise ig)
     floating*: bool # If tiling is on, whether this window is currently floating or not. If it's floating it won't be included in the tiling.
     tags*: TagSet
+    frameHeight*: uint
+    csd*: bool
   Config* = object
     borderActivePixel*, borderInactivePixel*, borderWidth*: uint
     frameActivePixel*, frameInactivePixel*, frameHeight*: uint

@@ -172,9 +172,9 @@ proc tileWindows*(self: var Wm): void =
       cint self.config.borderWidth*2)
   discard self.dpy.XResizeWindow(master.window, cuint masterWidth,
       cuint scrInfo[0].height - self.config.struts.top.cint -
-      self.config.struts.bottom.cint - self.config.frameHeight.cint -
+      self.config.struts.bottom.cint - master.frameHeight.cint -
       cint self.config.borderWidth*2)
-  self.renderTop master[]
+  for win in [master.frame.title, master.frame.top]: discard self.dpy.XResizeWindow(win, cuint masterWidth, cuint master.frameHeight)
   # discard self.dpy.XMoveResizeWindow(master.frame.window, cint self.config.struts.left, cint self.config.struts.top, cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth * 2) - self.config.gaps*2 - int16 self.config.struts.right, cuint scrInfo[0].height - int16(self.config.borderWidth * 2) - int16(self.config.struts.top) - int16(self.config.struts.bottom)) # bring the master window up to cover half the screen
   # discard self.dpy.XResizeWindow(master.window, cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) - self.config.gaps*2 - int16 self.config.struts.right, cuint scrInfo[0].height - int16(self.config.borderWidth*2) - int16(self.config.frameHeight) - int16(self.config.struts.top) - int16(self.config.struts.bottom)) # bring the master window up to cover half the screen
   var irrevelantLen: uint = 0
@@ -192,7 +192,7 @@ proc tileWindows*(self: var Wm): void =
       discard self.dpy.XResizeWindow(client.frame.title, w, cuint self.config.frameHeight)
       discard self.dpy.XResizeWindow(client.window, w, cuint scrInfo[
           0].height - self.config.struts.top.cint -
-          self.config.struts.bottom.cint - self.config.frameHeight.cint -
+          self.config.struts.bottom.cint - client.frameHeight.cint -
           cint self.config.borderWidth*2)
     else:
       let stackElem = i - int irrevelantLen -
@@ -218,7 +218,7 @@ proc tileWindows*(self: var Wm): void =
       discard self.dpy.XResizeWindow(client.window, w, cuint ((scrInfo[
           0].height - self.config.struts.bottom.cint -
           self.config.struts.top.cint) div int16(clientLen - 1)) - int16(
-          self.config.borderWidth*2) - int16(self.config.frameHeight) - (
+          self.config.borderWidth*2) - int16(client.frameHeight) - (
           if stackElem == 1: 0 else: self.config.gaps))
       # the number of windows on the stack is i (the current client) minus the master window minus any irrevelant windows
       # discard self.dpy.XMoveResizeWindow(client.frame.window, cint scrInfo[0].width shr 1, cint(float(scrInfo[0].height) * ((i - int irrevelantLen) / int clientLen - 1)) + cint self.config.gaps, cuint scrInfo[0].width shr 1 - int16(self.config.borderWidth * 2) - self.config.gaps, cuint (scrInfo[0].height div int16(clientLen - 1)) - int16(self.config.struts.bottom) - int16(self.config.borderWidth * 2) - self.config.gaps) # bring the master window up to cover half the screen
@@ -239,14 +239,6 @@ proc renderTop*(self: var Wm; client: var Client): void =
   gc = self.dpy.XCreateGC(client.frame.close, 0, addr gcVal)
   # discard self.dpy.XSetForeground(gc, self.config.textActivePixel)
   let fp = if self.focused.isSome and client == self.clients[self.focused.get]: self.config.frameActivePixel else: self.config.frameInactivePixel
-  var
-    bw: cuint
-    bh: cuint
-    hx: cint
-    hy: cint
-    bitmap: PixMap
-  discard self.dpy.XReadBitmapFile(client.frame.close, "icon.bmp", addr bw,
-      addr bh, addr bitmap, addr hx, addr hy)
   # draw the 3 'regions' of the titlebar; left, center, right
   var closeExists = false
   var maximizeExists = false

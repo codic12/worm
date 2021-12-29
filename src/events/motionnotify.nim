@@ -28,7 +28,7 @@ proc handleMotionNotify*(self: var Wm; ev: XMotionEvent): void =
       motionInfo.attr.width + (if motionInfo.start.button ==
       3: xdiff else: 0)).cuint, 1.max(motionInfo.attr.height + (
       if motionInfo.start.button == 3: ydiff else: 0) -
-      cint self.config.frameHeight).cuint)
+      cint client.frameHeight).cuint)
   let conf = XConfigureEvent(theType: ConfigureNotify, display: self.dpy,
       event: client.window, window: client.window, x: motionInfo.attr.x + (
       if motionInfo.start.button == 1: xdiff else: 0), y: motionInfo.attr.y + (
@@ -37,12 +37,12 @@ proc handleMotionNotify*(self: var Wm; ev: XMotionEvent): void =
               3: xdiff else: 0)).cuint, height: cint 1.max(
           motionInfo.attr.height +
           (if motionInfo.start.button == 3: ydiff else: 0) -
-      cint self.config.frameHeight).cuint)
+      cint client.frameHeight).cuint)
   discard self.dpy.XSendEvent(client.window, false, StructureNotifyMask, cast[
       ptr XEvent](unsafeAddr conf))
   discard self.dpy.XResizeWindow(client.frame.top, 1.max(
       motionInfo.attr.width + (if motionInfo.start.button ==
-      3: xdiff else: 0)).cuint, cuint self.config.frameHeight)
+      3: xdiff else: 0)).cuint, cuint client.frameHeight)
   discard self.dpy.XResizeWindow(client.frame.title, 1.max(
       motionInfo.attr.width + (if motionInfo.start.button ==
-      3: xdiff else: 0)).cuint, cuint self.config.frameHeight)
+      3: xdiff else: 0)).cuint, cuint client.frameHeight)

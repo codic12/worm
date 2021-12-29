@@ -1,4 +1,4 @@
-import ../wm, ../types, ../atoms
+import ../wm, ../types, ../atoms, ../log
 import std/[options, strutils]
 import x11/[x, xlib, xft, xatom]
 
@@ -36,17 +36,27 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
   if attr.overrideRedirect: return
   let wintype = getProperty[Atom](self.dpy, ev.window, self.netAtoms[
       NetWMWindowType])
+  type Hints = object
+    flags, functions, decorations: culong
+    inputMode: clong
+    status: culong
   if wintype.isSome and wintype.get in {self.netAtoms[
       NetWMWindowTypeDock], self.netAtoms[NetWMWindowTypeDropdownMenu],
           self.netAtoms[NetWMWindowTypePopupMenu], self.netAtoms[
           NetWMWindowTypeTooltip], self.netAtoms[
-          NetWMWindowTypeNotification]}:
+          NetWMWindowTypeNotification], self.netAtoms[NetWMWindowTypeDesktop]}:
     discard self.dpy.XMapWindow ev.window
     return # Don't manage irregular windows
+  let hints = getProperty[Hints](self.dpy, ev.window, self.dpy.XInternAtom("_MOTIF_WM_HINTS", false))
+  var frameHeight = self.config.frameHeight
+  var csd=false
+  if hints.isSome and hints.get.flags == 2 and hints.get.decorations == 0:
+    frameHeight = 0
+    csd = true
   var frameAttr = XSetWindowAttributes(backgroundPixel: culong self.config.frameActivePixel,
       borderPixel: self.config.borderActivePixel, colormap: attr.colormap)
-  let frame = self.dpy.XCreateWindow(self.root, attr.x, attr.y,
-      cuint attr.width, cuint attr.height + cint self.config.frameHeight,
+  let frame = self.dpy.XCreateWindow(self.root, attr.x + self.config.struts.left.cint, attr.y + self.config.struts.top.cint,
+      cuint attr.width, cuint attr.height + cint frameHeight,
       cuint self.config.borderWidth, attr.depth,
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
@@ -54,21 +64,21 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
       SubstructureRedirectMask)
   discard self.dpy.XSelectInput(ev.window, PropertyChangeMask)
   discard self.dpy.XReparentWindow(ev.window, frame, 0,
-      cint self.config.frameHeight)
+      cint frameHeight)
   let top = self.dpy.XCreateWindow(frame, 0, 0,
-      cuint attr.width, cuint self.config.frameHeight, 0, attr.depth,
+      cuint attr.width, cuint frameHeight, 0, attr.depth,
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
   let titleWin = self.dpy.XCreateWindow(top, 0, 0,
-      cuint attr.width, cuint self.config.frameHeight, 0, attr.depth,
+      cuint attr.width, cuint frameHeight, 0, attr.depth,
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
   let close = self.dpy.XCreateWindow(top, cint attr.width - self.config.buttonSize.cint, 0,
-      self.config.buttonSize.cuint, cuint self.config.frameHeight, 0, attr.depth,
+      self.config.buttonSize.cuint, cuint frameHeight, 0, attr.depth,
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
   let maximize = self.dpy.XCreateWindow(top, cint attr.width - self.config.buttonSize.cint, 0,
-      self.config.buttonSize.cuint, cuint self.config.frameHeight, 0, attr.depth,
+      self.config.buttonSize.cuint, cuint frameHeight, 0, attr.depth,
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
   for window in [frame, ev.window, top, titleWin]: discard self.dpy.XMapWindow window
@@ -111,7 +121,7 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
         GrabModeSync, GrabModeSync, None, None)
   self.clients.add Client(window: ev.window, frame: Frame(window: frame,
       top: top, close: close, maximize: maximize, title: titleWin), draw: draw, color: color,
-      title: $title, tags: self.tags, floating: self.layout == lyFloating)
+      title: $title, tags: self.tags, floating: self.layout == lyFloating, frameHeight: frameHeight, csd: csd)
   self.updateClientList
   let extents = [self.config.borderWidth, self.config.borderWidth,
       self.config.borderWidth+self.config.frameHeight, self.config.borderWidth]
@@ -127,9 +137,21 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
   for window in [frame, ev.window, top]: discard self.dpy.XRaiseWindow window
   discard self.dpy.XSetInputFocus(ev.window, RevertToPointerRoot, CurrentTime)
   self.focused = some uint self.clients.len - 1
-  for i, client in self.clients:
-    if (self.focused.isSome and uint(i) != self.focused.get) or self.focused.isNone: discard self.dpy.XSetWindowBorder(client.frame.window,
-            self.config.borderInactivePixel)
+  for i, client in self.clients.mpairs:
+    if self.focused.get.int == i: continue
+    discard self.dpy.XSetWindowBorder(client.frame.window,
+          self.config.borderInactivePixel)
+    for window in [client.frame.top,client.frame.title,client.frame.window,client.frame.close,client.frame.maximize]:
+      discard self.dpy.XSetWindowBackground(window, self.config.frameInactivePixel)
+    var attr: XWindowAttributes
+    discard self.dpy.XGetWindowAttributes(client.window, addr attr)
+    var color: XftColor
+    discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring(
+        "#" & self.config.textInactivePixel.toHex 6), addr color)
+    client.color = color
+    self.renderTop client
+    discard self.dpy.XSync false
+    discard self.dpy.XFlush
   if self.layout == lyTiling: self.tileWindows
   while true:
     var currEv: XEvent

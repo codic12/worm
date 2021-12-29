@@ -50,3 +50,4 @@ Licensed under the MIT license. See the LICENSE file for more info.
 Thanks to [phisch](https://github.com/phisch) for making the logo!
 
 Thanks to everyone else that's opened an issue, a PR, or just tried out worm. 
+

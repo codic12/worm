@@ -14,7 +14,7 @@ type
     NetWMWindowTypeToolbar, NetWMWindowTypeSplash, NetWMWindowTypeMenu,
     NetWMWindowTypeDropdownMenu, NetWMWindowTypePopupMenu,
         NetWMWindowTypeTooltip,
-    NetWMWindowTypeNotification, NetWMWindowTypeDock,
+    NetWMWindowTypeNotification, NetWMWindowTypeDock, NetWMWindowTypeDesktop,
     NetWMDesktop, NetDesktopViewport, NetNumberOfDesktops, NetCurrentDesktop,
         NetDesktopNames, NetFrameExtents
   IpcAtom* = enum
@@ -53,6 +53,7 @@ func getNetAtoms*(dpy: ptr Display): array[NetAtom, Atom] =
     dpy.XInternAtom("_NET_WM_WINDOW_TYPE_TOOLTIP", false),
     dpy.XInternAtom("_NET_WM_WINDOW_TYPE_NOTIFICATION", false),
     dpy.XInternAtom("_NET_WM_WINDOW_TYPE_DOCK", false),
+    dpy.XInternAtom("_NET_WM_WINDOW_TYPE_DESKTOP", false),
     dpy.XInternAtom("_NET_WM_DESKTOP", false),
     dpy.XInternAtom("_NET_DESKTOP_VIEWPORT", false),
     dpy.XInternAtom("_NET_NUMBER_OF_DESKTOPS", false),
