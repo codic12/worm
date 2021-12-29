@@ -175,6 +175,7 @@ proc tileWindows*(self: var Wm): void =
       self.config.struts.bottom.cint - master.frameHeight.cint -
       cint self.config.borderWidth*2)
   for win in [master.frame.title, master.frame.top]: discard self.dpy.XResizeWindow(win, cuint masterWidth, cuint master.frameHeight)
+  self.renderTop master[]
   # discard self.dpy.XMoveResizeWindow(master.frame.window, cint self.config.struts.left, cint self.config.struts.top, cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth * 2) - self.config.gaps*2 - int16 self.config.struts.right, cuint scrInfo[0].height - int16(self.config.borderWidth * 2) - int16(self.config.struts.top) - int16(self.config.struts.bottom)) # bring the master window up to cover half the screen
   # discard self.dpy.XResizeWindow(master.window, cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) - self.config.gaps*2 - int16 self.config.struts.right, cuint scrInfo[0].height - int16(self.config.borderWidth*2) - int16(self.config.frameHeight) - int16(self.config.struts.top) - int16(self.config.struts.bottom)) # bring the master window up to cover half the screen
   var irrevelantLen: uint = 0
