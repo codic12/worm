@@ -2,7 +2,7 @@
 
 # Worm
 
-Worm is a tiny, suckless, dynamic, tag-based window manager written in the Nim language.
+Worm is a tiny, dynamic, tag-based window manager written in the Nim language.
 It supports both a floating mode and master-stack tiling with gaps and struts.
 Check out the [screenshots on the wiki](https://github.com/codic12/worm/wiki/Screenshots) for some examples of how it looks.
 
