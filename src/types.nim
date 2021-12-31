@@ -27,6 +27,7 @@ type
     tags*: TagSet
     frameHeight*: uint
     csd*: bool
+    class*: string
   Config* = object
     borderActivePixel*, borderInactivePixel*, borderWidth*: uint
     frameActivePixel*, frameInactivePixel*, frameHeight*: uint

@@ -13,4 +13,5 @@ bin           = @["worm", "wormc"]
 requires "nim >= 1.4.0"
 requires "x11"
 # requires "cairo" # disgusting
-requires "pixie"
+requires "pixie" # chad native Nim drawing library. lets go!
+requires "regex"

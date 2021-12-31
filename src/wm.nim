@@ -4,6 +4,7 @@ import types
 import atoms
 import log
 import pixie
+import regex
 # import events/configurerequest
 
 converter toXBool*(x: bool): XBool = x.XBool
@@ -23,6 +24,7 @@ type
     focused*: Option[uint]
     tags*: TagSet
     layout*: Layout
+    noDecorList*: seq[Regex]
 
 # event handlers
 # proc handleButtonPress(self: var Wm; ev: XButtonEvent): void
@@ -133,7 +135,7 @@ proc newWm*: Wm =
           textActivePixel: 0xffffff, textInactivePixel: 0x000000, textOffset: (x: uint 10, y: uint 20), gaps: 0, buttonSize: 14,
               struts: (top: uint 10, bottom: uint 40, left: uint 10,
               right: uint 10)), tags: defaultTagSet(),
-              layout: lyFloating) # The default configuration is reasonably sane, and for now based on the Iceberg colorscheme. It may be changed later; it's recommended for users to write their own.
+              layout: lyFloating, noDecorList: @[]) # The default configuration is reasonably sane, and for now based on the Iceberg colorscheme. It may be changed later; it's recommended for users to write their own.
 
 func findClient*(self: var Wm; predicate: proc(client: Client): bool): Option[(
     ptr Client, uint)] =

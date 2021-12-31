@@ -1,6 +1,7 @@
 import ../wm, ../types, ../atoms, ../log
 import std/[options, strutils]
-import x11/[x, xlib, xft, xatom]
+import x11/[x, xlib, xft, xatom, xutil]
+import regex
 
 func getProperty[T](
   dpy: ptr Display;
@@ -53,6 +54,16 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
   if hints.isSome and hints.get.flags == 2 and hints.get.decorations == 0:
     frameHeight = 0
     csd = true
+  var chr: XClassHint
+  discard self.dpy.XGetClassHint(ev.window, addr chr)
+  block:
+    for thing in self.noDecorList:
+      var m: RegexMatch
+      log $chr.resClass
+      log $thing
+      if ($chr.resClass).match thing:
+        csd = true
+        frameHeight = 0
   var frameAttr = XSetWindowAttributes(backgroundPixel: culong self.config.frameActivePixel,
       borderPixel: self.config.borderActivePixel, colormap: attr.colormap)
   let frame = self.dpy.XCreateWindow(self.root, attr.x + self.config.struts.left.cint, attr.y + self.config.struts.top.cint,
@@ -121,7 +132,7 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
         GrabModeSync, GrabModeSync, None, None)
   self.clients.add Client(window: ev.window, frame: Frame(window: frame,
       top: top, close: close, maximize: maximize, title: titleWin), draw: draw, color: color,
-      title: $title, tags: self.tags, floating: self.layout == lyFloating, frameHeight: frameHeight, csd: csd)
+      title: $title, tags: self.tags, floating: self.layout == lyFloating, frameHeight: frameHeight, csd: csd, class: $chr.resClass)
   self.updateClientList
   let extents = [self.config.borderWidth, self.config.borderWidth,
       self.config.borderWidth+self.config.frameHeight, self.config.borderWidth]

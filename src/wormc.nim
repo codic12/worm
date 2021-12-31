@@ -93,6 +93,14 @@ proc main: void =
       dpy.XSetTextProperty(root, addr fontProp, ipcAtoms[IpcMaximizePath])
       discard XFree fontProp.value
       data = [clong ipcAtoms[IpcMaximizePath], 0, 0, 0, 0]
+    of "decoration-disable": # Ditto
+      var fontList = cstring params[i+1]
+      var fontProp: XTextProperty
+      discard dpy.XUtf8TextListToTextProperty(addr fontList, 1,
+          XUTF8StringStyle, addr fontProp)
+      dpy.XSetTextProperty(root, addr fontProp, ipcAtoms[IpcDecorationDisable])
+      discard XFree fontProp.value
+      data = [clong ipcAtoms[IpcDecorationDisable], 0, 0, 0, 0]
     of "text-offset": data = [clong ipcAtoms[IpcTextOffset],
         clong params[i+1].parseInt, clong params[i+2].parseInt, 0, 0]
     of "kill-client": data = [clong ipcAtoms[IpcKillClient], clong params[

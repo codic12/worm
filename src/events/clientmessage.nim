@@ -1,6 +1,7 @@
 import ../wm, ../atoms, ../types, ../log
 import x11/[xlib, x, xinerama, xatom, xft, xutil]
 import std/[options, strutils]
+import regex
 
 proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
   if ev.messageType == self.netAtoms[NetWMState]:
@@ -514,7 +515,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
           IpcClosePath])
       let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
           ptr ptr cstring](addr fontList), addr n)
-      log "Changing root menu path to " & $fontList[0]
+      log "Changing close path to " & $fontList[0]
       self.config.closePath = $fontList[0]
       if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
         XFreeStringList cast[ptr cstring](fontList)
@@ -527,8 +528,21 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
           IpcMaximizePath])
       let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
           ptr ptr cstring](addr fontList), addr n)
-      log "Changing root menu path to " & $fontList[0]
+      log "Changing maximize path to " & $fontList[0]
       self.config.maximizePath = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcDecorationDisable]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcDecorationDisable])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Appending to decoration disable list: " & $fontList[0]
+      self.noDecorList.add re $fontList[0]
       if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
