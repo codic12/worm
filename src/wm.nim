@@ -25,7 +25,8 @@ type
     tags*: TagSet
     layout*: Layout
     noDecorList*: seq[Regex]
-
+    # ignoreNextConfigureNotify*: bool
+    
 # event handlers
 # proc handleButtonPress(self: var Wm; ev: XButtonEvent): void
 # proc handleButtonRelease(self: var Wm; ev: XButtonEvent): void

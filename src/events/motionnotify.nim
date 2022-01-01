@@ -46,3 +46,4 @@ proc handleMotionNotify*(self: var Wm; ev: XMotionEvent): void =
   discard self.dpy.XResizeWindow(client.frame.title, 1.max(
       motionInfo.attr.width + (if motionInfo.start.button ==
       3: xdiff else: 0)).cuint, cuint client.frameHeight)
+
