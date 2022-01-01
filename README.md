@@ -1,12 +1,12 @@
 <img src=logo.svg align=right>
 
-# worm
+# Worm
 
 Worm is a tiny, dynamic, tag-based window manager written in the Nim language.
 It supports both a floating mode and master-stack tiling with gaps and struts.
-Check out the screenshots on the wiki for some examples of how it looks.
+Check out the [screenshots on the wiki](https://github.com/codic12/worm/wiki/Screenshots) for some examples of how it looks.
 
-## build / install
+## Build / install
 
 Install Nim >= 1.4.0, for example through Choosenim. Clone this repo and run
 
@@ -21,9 +21,9 @@ Alternatively, for users using Arch, you can use the AUR package worm-git.
 $ yay -Sy worm-git
 ```
 
-## configuration
+## Configuration
 
-### autostart
+### Autostart
 
 Worm will try to execute the file `~/.config/worm/rc` on startup.
 Simply create it as a shell-script to execute your favorite applications with
@@ -32,20 +32,20 @@ worm.
 
 An example can be found [here](/examples/rc).
 
-### keybindings
+### Keybindings
 
 Worm does not have a built-in keyboard mapper, so you should use something like
 [sxhkd](https://github.com/baskerville/sxhkd).
-Please read [the doc](docs/wormc.md) to understand how wormc works before
+Please read [the docs](docs/wormc.md) to understand how wormc works before
 writing your own sxhkdrc.
 
 An example sxhkdrc can be found [here](/examples/sxhkdrc).
 
-## license
+## License
 
 Licensed under the MIT license. See the LICENSE file for more info.
 
-## credits
+## Credits
 
 Thanks to [phisch](https://github.com/phisch) for making the logo!
 
