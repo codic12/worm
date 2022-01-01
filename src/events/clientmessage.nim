@@ -39,7 +39,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
           for i in countup(0, scrNo - 1):
             cumulWidth += scrInfo[i].width
             cumulHeight += scrInfo[i].height
-            if attr.x <= cumulWidth - attr.width and attr.y <= cumulHeight - attr.height:
+            if attr.x <= cumulWidth - attr.width:
               x = scrInfo[i].xOrg
               y = scrInfo[i].yOrg
               width = scrInfo[i].width.uint

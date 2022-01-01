@@ -555,18 +555,39 @@ proc maximizeClient*(self: var Wm; client: var Client): void =
   var scrNo: cint
   var scrInfo = cast[ptr UncheckedArray[XineramaScreenInfo]](
       self.dpy.XineramaQueryScreens(addr scrNo))
+  # where the hell is our window at
+  var attr: XWindowAttributes
+  discard self.dpy.XGetWindowAttributes(client.frame.window, addr attr)
+  var x: int
+  var y: int
+  var width: uint
+  var height: uint
+  if scrno == 1:
+    # 1st monitor, cuz only one
+    x = 0
+    y = 0
+    width = scrInfo[0].width.uint
+    height = scrInfo[0].height.uint
+  else:
+    var cumulWidth = 0
+    var cumulHeight = 0
+    for i in countup(0, scrNo - 1):
+      cumulWidth += scrInfo[i].width
+      cumulHeight += scrInfo[i].height
+      if attr.x <= cumulWidth - attr.width:
+        x = scrInfo[i].xOrg
+        y = scrInfo[i].yOrg
+        width = scrInfo[i].width.uint
+        height = scrInfo[i].height.uint
   let masterWidth =
     uint scrInfo[0].width -
-        (self.config.struts.left.cint + self.config.struts.right.cint + cint self.config.borderWidth*2)
-  discard self.dpy.XMoveResizeWindow(client.frame.window,
-      cint self.config.struts.left, cint self.config.struts.top,
-      cuint masterWidth, cuint scrInfo[0].height -
-      self.config.struts.top.int16 - self.config.struts.bottom.int16 -
-      cint self.config.borderWidth*2)
+       self.config.struts.left.cint - self.config.struts.right.cint - (self.config.borderWidth.cint*2)
+  discard self.dpy.XMoveWindow(client.frame.window,
+      cint self.config.struts.left + uint x, cint self.config.struts.top + uint y)
   discard self.dpy.XResizeWindow(client.window, cuint masterWidth,
-      cuint scrInfo[0].height - self.config.struts.top.cint -
-      self.config.struts.bottom.cint - self.config.frameHeight.cint -
-      cint self.config.borderWidth*2)
+      cuint(height - self.config.struts.top -
+      self.config.struts.bottom - client.frameHeight -
+      self.config.borderWidth*2))
   self.renderTop client
 
 proc updateClientList(self: Wm): void =
