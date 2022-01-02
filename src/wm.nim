@@ -237,7 +237,7 @@ proc renderTop*(self: var Wm; client: var Client): void =
       cint client.title.len, addr extent)
   var attr: XWindowAttributes
   discard self.dpy.XGetWindowAttributes(client.frame.window, addr attr)
-  for win in [client.frame.title, client.frame.close]: discard self.dpy.XClearWindow win
+  for win in [client.frame.title, client.frame.close, client.frame.maximize]: discard self.dpy.XClearWindow win
   var gc: GC
   var gcVal: XGCValues
   gc = self.dpy.XCreateGC(client.frame.close, 0, addr gcVal)
@@ -383,12 +383,12 @@ proc renderTop*(self: var Wm; client: var Client): void =
             (extent.width div 2) + self.config.buttonOffset.x.cint + self.config.textOffset.x.cint + self.config.buttonSize.cint
           elif i == 1 and self.config.frameParts.center[0] == fpTitle:
             (extent.width div 2) + self.config.buttonOffset.x.cint + self.config.textOffset.x.cint - self.config.buttonSize.cint
-          elif i == 1 and self.config.frameParts.center.len >= 2 and self.config.frameParts.center[0] == fpMaximize and self.config.frameParts.center[2] == fpTitle:
+          elif i == 1 and self.config.frameParts.center.len >= 3 and self.config.frameParts.center[0] == fpMaximize and self.config.frameParts.center[2] == fpTitle:
             # meh
             -(extent.width div 2)
           elif i == 2 and self.config.frameParts.center[1] == fpTitle:
             self.config.buttonSize.cint + extent.width div 2
-          elif i == 1 and self.config.frameParts.center.len >= 2 and self.config.frameParts.center[2] == fpMaximize:
+          elif i == 1 and self.config.frameParts.center.len >= 3 and self.config.frameParts.center[2] == fpMaximize:
             0
           else:
             0) + (attr.width div 2) - (if i == 0 and self.config.frameParts.center.len > 1 and self.config.frameParts.center.find(fpTitle) != -1: self.config.buttonSize.cint +
@@ -404,15 +404,19 @@ proc renderTop*(self: var Wm; client: var Client): void =
           0: -self.config.buttonOffset.x.cint else: self.config.buttonOffset.x.cint) +
           (if i == 1 and self.config.frameParts.center[0] == fpTitle:
             self.config.textOffset.x.cint + extent.width div 2
-          elif i == 1 and self.config.frameParts.center[0] == fpClose:
+          elif i == 1 and self.config.frameParts.center[0] == fpClose and self.config.frameParts.center.len>2:
             -(extent.width div 2) - self.config.buttonOffset.x.cint
+          elif i == 1 and self.config.frameParts.center[0] == fpClose:
+            self.config.buttonSize.cint
           elif i == 2 and self.config.frameParts.center[1] == fpTitle:
             extent.width div 2
           elif i == 2 and self.config.frameParts.center[1] == fpClose:
             extent.width div 2 + self.config.buttonSize.cint + self.config.buttonOffset.x.cint
-          elif i == 0 and self.config.frameParts.center.len >= 2:
+          elif i == 0 and self.config.frameParts.center.len > 2:
             # meh
             -(extent.width div 2) - self.config.buttonOffset.x.cint
+          elif i == 0:
+            -self.config.buttonOffset.x.cint
           else: 0) + (attr.width div 2), self.config.buttonOffset.y.cint)
       var
         screen = newImage(self.config.buttonSize.int, self.config.buttonSize.int)
@@ -485,13 +489,13 @@ proc renderTop*(self: var Wm; client: var Client): void =
       discard self.dpy.XMoveWindow(client.frame.close, (if i ==
           0: -self.config.buttonOffset.x.cint else: self.config.buttonOffset.x.cint) +
           (if i == 1 and self.config.frameParts.right.len == 2:
-            -self.config.buttonSize.cint
+            -self.config.buttonOffset.x.cint*2  #-self.config.buttonSize.cint
           elif i == 1 and self.config.frameParts.right.len == 3:
             -extent.width - self.config.buttonOffset.x.cint
           elif i == 0 and self.config.frameParts.right.len == 2 and self.config.frameParts.right[1] == fpTitle:
             -extent.width
           elif i == 0 and self.config.frameParts.right.len == 2 and self.config.frameParts.right[1] == fpMaximize:
-            -self.config.buttonSize.cint*2
+            -self.config.buttonSize.cint - self.config.buttonOffset.x.cint
           elif i == 0 and self.config.frameParts.right.len == 3:
             -self.config.buttonSize.cint - (self.config.buttonOffset.x.cint + extent.width)
           elif i == 2:
@@ -585,10 +589,15 @@ proc maximizeClient*(self: var Wm; client: var Client): void =
        self.config.struts.left.cint - self.config.struts.right.cint - (self.config.borderWidth.cint*2)
   discard self.dpy.XMoveWindow(client.frame.window,
       cint self.config.struts.left + uint x, cint self.config.struts.top + uint y)
+  discard self.dpy.XResizeWindow(client.frame.window, cuint masterWidth,
+      cuint(height - self.config.struts.top -
+      self.config.struts.bottom))
   discard self.dpy.XResizeWindow(client.window, cuint masterWidth,
       cuint(height - self.config.struts.top -
-      self.config.struts.bottom - client.frameHeight -
-      self.config.borderWidth*2))
+      self.config.struts.bottom - client.frameHeight))
+  for win in [client.frame.top, client.frame.title]: discard self.dpy.XResizeWindow(win, cuint masterWidth, cuint self.config.frameHeight)
+  discard self.dpy.XSync false
+  discard self.dpy.XFlush
   self.renderTop client
 
 proc updateClientList(self: Wm): void =
