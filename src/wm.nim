@@ -591,10 +591,10 @@ proc maximizeClient*(self: var Wm; client: var Client): void =
       cint self.config.struts.left + uint x, cint self.config.struts.top + uint y)
   discard self.dpy.XResizeWindow(client.frame.window, cuint masterWidth,
       cuint(height - self.config.struts.top -
-      self.config.struts.bottom))
+      self.config.struts.bottom - self.config.borderWidth.cuint*2))
   discard self.dpy.XResizeWindow(client.window, cuint masterWidth,
       cuint(height - self.config.struts.top -
-      self.config.struts.bottom - client.frameHeight))
+      self.config.struts.bottom - client.frameHeight - self.config.borderWidth.cuint*2))
   for win in [client.frame.top, client.frame.title]: discard self.dpy.XResizeWindow(win, cuint masterWidth, cuint self.config.frameHeight)
   discard self.dpy.XSync false
   discard self.dpy.XFlush
