@@ -1,4 +1,4 @@
-import ../wm, ../types, ../log
+import ../wm, ../types
 import x11/xlib
 import std/options
 
