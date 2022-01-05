@@ -24,12 +24,16 @@ Sets the border color for the currently active client. Ex: `wormc border-active-
 Sets the border color for all inactive clients. Ex: `wormc border-inactive-pixel $((16#000000))`
 ### `border-width(uint)`
 Sets the border width for all clients, active or not. Ex: `wormc border-width 5`
-### `frame-pixel(uint)`
-Sets the color of the frame (titlebar) for all windows, active or not. Ex: `wormc frame-pixel $((16#123456))`
+### `frame-active-pixel(uint)`
+Sets the color of the frame (titlebar) for the active window. Ex: `wormc frame-active-pixel $((16#123456))`
+### `frame-inactive-pixel(uint)`
+Sets the color of the frame (titlebar) for all windows that are inactive. Ex: `wormc frame-inactive-pixel $((16#222222))`
 ### `frame-height(uint)`
 Sets the height of the frame / titlebar for all clients, active or not. Ex: `wormc frame-height 20`
-### `text-pixel(uint)`
-Sets the color of the text drawn on the titlebar / frame. Ex: `wormc text-pixel $((16#000000))`
+### `text-active-pixel(uint)`
+Sets the color of the text drawn on the titlebar / frame for active windows. Ex: `wormc text-pixel $((16#ffffff))`
+### `text-inactive-pixel(uint)`
+Sets the color of the text drawn on the titlebar / frame for inactive windows. Ex: `wormc text-pixel $((16#000000))`
 ### `gaps(uint)`
 Sets the gaps to the specified amount. When in tiling mode, this distance is reserved between the inside parts of windows. See struts for the outside. Ex: `wormc gaps 5`
 ### `text-font(string)`
@@ -82,3 +86,6 @@ The offset at both the x and y positions at which buttons on the titlebar (M, C)
 Full path to the maximize and close buttons, respectively. If this is unspecified or the value is invalid, then that part will skip rendering. Eg `wormc maximize-path ~/.config/worm/max.png`.
 ### `root-menu(string)`
 Sets path to the root menu. If this file is valid, upon right-clicking the root window it's executed (assumed to be an executable file). Eg `wormc root-menu ~/worm/examples/jgmenu_run`.
+### `decoration-disable(string)`
+Disable decorations for all windows which have a class that matches the regex given in `string`. For an example: `wormc decoration-disable '(?i).*firefox.*'`.
+Note: The regex format we use is described at [the nim regex docs page](https://nitely.github.io/nim-regex/regex.html)
