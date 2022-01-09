@@ -18,7 +18,7 @@ And you should end up with two binaries; strip and use!
 Alternatively, for users using Arch, you can use the AUR package worm-git.
 
 ```
-$ yay -Sy worm-git
+$ yay -S worm-git
 ```
 
 ## Configuration
