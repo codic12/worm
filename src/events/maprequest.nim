@@ -135,7 +135,7 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
       title: $title, tags: self.tags, floating: self.layout == lyFloating, frameHeight: frameHeight, csd: csd, class: $chr.resClass)
   self.updateClientList
   let extents = [self.config.borderWidth, self.config.borderWidth,
-      self.config.borderWidth+self.config.frameHeight, self.config.borderWidth]
+      self.config.borderWidth+frameHeight, self.config.borderWidth]
   discard self.dpy.XChangeProperty(
     ev.window,
     self.netAtoms[NetFrameExtents],

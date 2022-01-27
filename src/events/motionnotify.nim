@@ -1,4 +1,4 @@
-import ../wm, ../types
+import ../wm, ../types, ../log
 import std/options
 import x11/[xlib, x]
 
@@ -38,6 +38,7 @@ proc handleMotionNotify*(self: var Wm; ev: XMotionEvent): void =
           motionInfo.attr.height +
           (if motionInfo.start.button == 3: ydiff else: 0) -
       cint client.frameHeight).cuint)
+  log $client.frameHeight
   discard self.dpy.XSendEvent(client.window, false, StructureNotifyMask, cast[
       ptr XEvent](unsafeAddr conf))
   discard self.dpy.XResizeWindow(client.frame.top, 1.max(
