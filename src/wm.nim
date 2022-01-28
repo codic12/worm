@@ -43,7 +43,7 @@ type
 proc newWm*: Wm
 proc tileWindows*(self: var Wm): void
 proc renderTop*(self: var Wm; client: var Client): void
-proc maximizeClient*(self: var Wm; client: var Client): void
+proc maximizeClient*(self: var Wm; client: var Client, force: bool = false, forceun: bool = false): void
 proc eventLoop*(self: var Wm): void
 proc dispatchEvent*(self: var Wm; ev: XEvent): void
 func findClient*(self: var Wm; predicate: proc(client: Client): bool): Option[(
@@ -555,14 +555,32 @@ proc renderTop*(self: var Wm; client: var Client): void =
           frameBuffer), self.config.buttonSize.cuint, self.config.buttonSize.cuint, 8, cint(self.config.buttonSize*4))
       discard XPutImage(self.dpy, client.frame.maximize, gc, image, 0, 0, 0, 0, self.config.buttonSize.cuint, self.config.buttonSize.cuint)
 
-proc maximizeClient*(self: var Wm; client: var Client): void =
+proc maximizeClient*(self: var Wm; client: var Client, force: bool = false, forceun: bool = false): void =
+  if (not force and client.maximized) or (force and forceun):
+    if client.beforeGeomMax.isNone: return
+    client.maximized = false
+    discard self.dpy.XMoveResizeWindow(client.frame.window,
+            cint client.beforeGeomMax.get.x, cint client.beforeGeomMax.get.y,
+            cuint client.beforeGeomMax.get.width,
+            cuint client.beforeGeomMax.get.height)
+    discard self.dpy.XMoveResizeWindow(client.window,
+            0, cint self.config.frameHeight,
+            cuint client.beforeGeomMax.get.width,
+            cuint client.beforeGeomMax.get.height - self.config.frameHeight)
+    discard self.dpy.XChangeProperty(client.window, self.netAtoms[
+            NetWMState], XaAtom, 32, PropModeReplace, cast[cstring]([]), 0)
+    self.renderTop client
+    return
+  client.maximized = true
   # maximize the provided client
   var scrNo: cint
   var scrInfo = cast[ptr UncheckedArray[XineramaScreenInfo]](
       self.dpy.XineramaQueryScreens(addr scrNo))
+  if scrInfo == nil: return
   # where the hell is our window at
   var attr: XWindowAttributes
   discard self.dpy.XGetWindowAttributes(client.frame.window, addr attr)
+  client.beforeGeomMax = some Geometry(x: attr.x, y: attr.y, width: uint attr.width, height: uint attr.height)
   var x: int
   var y: int
   var width: uint
@@ -596,6 +614,9 @@ proc maximizeClient*(self: var Wm; client: var Client): void =
       cuint(height - self.config.struts.top -
       self.config.struts.bottom - client.frameHeight - self.config.borderWidth.cuint*2))
   for win in [client.frame.top, client.frame.title]: discard self.dpy.XResizeWindow(win, cuint masterWidth, cuint self.config.frameHeight)
+  var states = [NetWMStateMaximizedHorz, NetWMStateMaximizedVert]
+  discard self.dpy.XChangeProperty(client.window, self.netAtoms[
+          NetWMState], XaAtom, 32, PropModeReplace, cast[cstring](addr states), 0)
   discard self.dpy.XSync false
   discard self.dpy.XFlush
   self.renderTop client

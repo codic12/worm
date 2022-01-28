@@ -4,11 +4,17 @@ import std/[options, strutils]
 import regex
 
 proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
+  log "LOL THIS"
+  log $ev.data.l
+  log $ev.messageType
+  log $(int self.netAtoms[NetWMStateMaximizedHorz])
+  log $(int self.netAtoms[NetWMStateMaximizedVert])
+
   if ev.messageType == self.netAtoms[NetWMState]:
-    let clientOpt = self.findClient do (client: Client) ->
+    var clientOpt = self.findClient do (client: Client) ->
         bool: client.window == ev.window
     if clientOpt.isNone: return
-    let client = clientOpt.get[0]
+    var client = clientOpt.get[0]
     if ev.format != 32: return # check we can access the union member
     if (ev.data.l[1] == int self.netAtoms[NetWMStateFullScreen]) or (
         ev.data.l[2] == int self.netAtoms[NetWMStateFullScreen]):
@@ -72,6 +78,19 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
         self.renderTop client[]
         discard self.dpy.XSetWindowBorderWidth(client.frame.window,
             cuint self.config.borderWidth)
+    elif (ev.data.l[1] == int self.netAtoms[NetWMStateMaximizedHorz]) or (ev.data.l[1] == int self.netAtoms[NetWMStateMaximizedVert]) or 
+       (ev.data.l[2] == int self.netAtoms[NetWMStateMaximizedVert]) or (ev.data.l[2] == int self.netAtoms[NetWMStateMaximizedHorz]):
+        if ev.data.l[0] == 2:
+          self.maximizeClient client[]
+        elif ev.data.l[0] == 1: # add max
+          if client.maximized: return
+          self.maximizeClient client[]
+        elif ev.data.l[0] == 0: # rm max
+          if not client.maximized: return
+          self.maximizeClient client[]
+        else:
+          # wtf
+          discard
   elif ev.messageType == self.netAtoms[NetActiveWindow]:
     if ev.format != 32: return
     let clientOpt = self.findClient do (client: Client) ->

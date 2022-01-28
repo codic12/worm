@@ -52,8 +52,23 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
   var frameHeight = self.config.frameHeight
   var csd=false
   if hints.isSome and hints.get.flags == 2 and hints.get.decorations == 0:
+    
     frameHeight = 0
     csd = true
+  var max = false
+  var state = block:
+    var
+      typ: Atom
+      fmt: cint
+      nitem: culong
+      baf: culong
+      props: ptr cuchar
+    discard self.dpy.XGetWindowProperty(ev.window, self.netAtoms[NetWMState], 0, high clong, false, AnyPropertyType, addr typ, addr fmt, addr nitem, addr baf, addr props)
+    props
+  if state != nil:
+    log "STATE"
+    if cast[int](state[]) in {int self.netAtoms[NetWMStateMaximizedHorz], int self.netAtoms[NetWMStateMaximizedVert]}:
+      max = true
   var chr: XClassHint
   discard self.dpy.XGetClassHint(ev.window, addr chr)
   block:
@@ -132,7 +147,9 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
         GrabModeSync, GrabModeSync, None, None)
   self.clients.add Client(window: ev.window, frame: Frame(window: frame,
       top: top, close: close, maximize: maximize, title: titleWin), draw: draw, color: color,
-      title: $title, tags: self.tags, floating: self.layout == lyFloating, frameHeight: frameHeight, csd: csd, class: $chr.resClass)
+      title: $title, tags: self.tags, floating: self.layout == lyFloating, frameHeight: frameHeight, csd: csd, class: $chr.resClass, maximized: max)
+  if max:
+    self.maximizeClient(self.clients[self.clients.len - 1], true)
   self.updateClientList
   let extents = [self.config.borderWidth, self.config.borderWidth,
       self.config.borderWidth+frameHeight, self.config.borderWidth]

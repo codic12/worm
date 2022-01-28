@@ -28,6 +28,8 @@ type
     frameHeight*: uint
     csd*: bool
     class*: string
+    beforeGeomMax*: Option[Geometry]
+    maximized*: bool
   Config* = object
     borderActivePixel*, borderInactivePixel*, borderWidth*: uint
     frameActivePixel*, frameInactivePixel*, frameHeight*: uint
