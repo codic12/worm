@@ -1,4 +1,7 @@
-import wm
+import
+  wm,
+  events
+
 when isMainModule:
-  var instance = newWm()
+  var instance = initWm()
   instance.eventLoop()

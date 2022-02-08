@@ -25,48 +25,46 @@ type
     tags*: TagSet
     layout*: Layout
     noDecorList*: seq[Regex]
-    # ignoreNextConfigureNotify*: bool
-    
-# event handlers
-# proc handleButtonPress(self: var Wm; ev: XButtonEvent): void
-# proc handleButtonRelease(self: var Wm; ev: XButtonEvent): void
-# proc handleMotionNotify(self: var Wm; ev: XMotionEvent): void
-# proc handleMapRequest(self: var Wm; ev: XMapRequestEvent): void
-# proc handleConfigureRequest(self: var Wm; ev: XConfigureRequestEvent): void
-# proc handleUnmapNotify(self: var Wm; ev: XUnmapEvent): void
-# proc handleDestroyNotify(self: var Wm; ev: XDestroyWindowEvent): void
-# proc handleClientMessage(self: var Wm; ev: XClientMessageEvent): void
-# proc handleConfigureNotify(self: var Wm; ev: XConfigureEvent): void
-# proc handleExpose(self: var Wm; ev: XExposeEvent): void
-# proc handlePropertyNotify(self: var Wm; ev: XPropertyEvent): void
-# others
-proc newWm*: Wm
-proc tileWindows*(self: var Wm): void
-proc renderTop*(self: var Wm; client: var Client): void
-proc maximizeClient*(self: var Wm; client: var Client, force: bool = false, forceun: bool = false): void
-proc eventLoop*(self: var Wm): void
-proc dispatchEvent*(self: var Wm; ev: XEvent): void
-func findClient*(self: var Wm; predicate: proc(client: Client): bool): Option[(
-    ptr Client, uint)]
-proc updateClientList*(self: Wm): void
-proc updateTagState*(self: Wm): void
-import events/[buttonpress, buttonrelease, clientmessage, configurenotify, configurerequest, destroynotify, expose, maprequest, motionnotify, propertynotify, unmapnotify]
-proc newWm*: Wm =
+
+proc initWm*(): Wm =
   let dpy = XOpenDisplay nil
-  if dpy == nil: quit 1
+
+  if dpy == nil:
+    quit 1
+
   log "Opened display"
+
   let root = XDefaultRootWindow dpy
+
   for button in [1'u8, 3]:
     # list from sxhkd (Mod2Mask NumLock, Mod3Mask ScrollLock, LockMask CapsLock).
-    for mask in [uint32 Mod1Mask, Mod1Mask or Mod2Mask, Mod1Mask or LockMask,
-        Mod1Mask or Mod3Mask, Mod1Mask or Mod2Mask or LockMask, Mod1Mask or
-        LockMask or Mod3Mask, Mod1Mask or Mod2Mask or Mod3Mask, Mod1Mask or
-        Mod2Mask or LockMask or Mod3Mask]:
-      discard dpy.XGrabButton(button, mask, root, true, ButtonPressMask or
-        PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None)
-  discard dpy.XSelectInput(root, SubstructureRedirectMask or SubstructureNotifyMask or ButtonPressMask)
-  let font = dpy.XftFontOpenName(XDefaultScreen dpy, "Noto Sans Mono:size=11")
-  let netAtoms = getNetAtoms dpy
+    for mask in [
+      uint32 Mod1Mask, Mod1Mask or Mod2Mask, Mod1Mask or LockMask,
+      Mod1Mask or Mod3Mask, Mod1Mask or Mod2Mask or LockMask, Mod1Mask or
+      LockMask or Mod3Mask, Mod1Mask or Mod2Mask or Mod3Mask, Mod1Mask or
+      Mod2Mask or LockMask or Mod3Mask
+      ]:
+      discard dpy.XGrabButton(
+        button,
+        mask,
+        root,
+        true,
+        ButtonPressMask or PointerMotionMask,
+        GrabModeAsync,
+        GrabModeAsync,
+        None,
+        None
+      )
+
+  discard dpy.XSelectInput(
+    root,
+    SubstructureRedirectMask or SubstructureNotifyMask or ButtonPressMask
+  )
+
+  let
+    font = dpy.XftFontOpenName(XDefaultScreen dpy, "Noto Sans Mono:size=11")
+    netAtoms = getNetAtoms dpy
+
   discard dpy.XChangeProperty(
     root,
     netAtoms[NetSupportingWMCheck],
