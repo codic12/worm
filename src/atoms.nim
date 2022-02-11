@@ -58,6 +58,8 @@ type
     IpcKillClient           = "WORM_IPC_KILL_CLIENT",
     IpcCloseClient          = "WORM_IPC_CLOSE_CLIENT",
     IpcSwitchTag            = "WORM_IPC_SWITCH_TAG",
+    IpcAddTag               = "WORM_IPC_ADD_TAG",
+    IpcRemoveTag            = "WORM_IPC_REMOVE_TAG"
     IpcLayout               = "WORM_IPC_LAYOUT",
     IpcGaps                 = "WORM_IPC_GAPS",
     IpcMaster               = "WORM_IPC_MASTER",

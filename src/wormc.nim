@@ -1,7 +1,7 @@
-import
-  std/[strutils, os],
-  x11/[x, xlib, xutil],
-  atoms
+import x11/[x, xlib, xutil]
+import std/[strutils, os]
+# import log
+import atoms
 
 converter toXBool(x: bool): XBool = x.XBool
 converter toBool(x: XBool): bool = x.bool
@@ -9,157 +9,136 @@ converter toBool(x: XBool): bool = x.bool
 type Layout = enum
   lyFloating, lyTiling
 
-proc formatMess(a: Atom, params: varargs[string, `$`]): array[5, clong] =
-  result[0] = a.clong
-
-  for i in 1 ..< 5:
-    if i < params.len:
-      result[i] = params[i].parseInt().clong
-
-proc sendStrPrep(dpy: PDisplay, a: Atom, param: string) =
-  var
-    fontList = param.cstring
-    fontProp: XTextProperty
-  discard dpy.XUtf8TextListToTextProperty(
-    addr fontList,
-    1,
-    XUTF8StringStyle,
-    addr fontProp
-  )
-  dpy.XSetTextProperty(
-    dpy.XDefaultRootWindow,
-    addr fontProp,
-    a
-  )
-  discard XFree fontProp.value
-
-proc getLayoutOrd(s: string): int =
-  if s == "floating":
-    result = lyFloating.ord.clong
-  elif s == "tiling":
-    result = lyTiling.ord.clong
-  else:
-    quit 1
-
-proc main =
+proc main: void =
   let dpy = XOpenDisplay nil
   if dpy == nil: return
-
-  let
-    ipcAtoms = dpy.getIpcAtoms
-    root = dpy.XDefaultRootWindow
-    params = commandLineParams()
+  let ipcAtoms = dpy.getIpcAtoms
+  let root = dpy.XDefaultRootWindow
+  let params = commandLineParams()
 
   for i, param in commandLineParams():
     var data: array[5, clong]
     case param:
-    of "border-active-pixel":
-      data = ipcAtoms[IpcBorderActivePixel].formatMess(params[i+1])
-    of "border-inactive-pixel":
-      data = ipcAtoms[IpcBorderInactivePixel].formatMess(params[i+1])
-    of "border-width":
-      data = ipcAtoms[IpcBorderWidth].formatMess(params[i+1])
-    of "frame-active-pixel":
-      data = ipcAtoms[IpcFrameActivePixel].formatMess(params[i+1])
-    of "frame-inactive-pixel":
-      data = ipcAtoms[IpcFrameInactivePixel].formatMess(params[i+1])
-    of "frame-height":
-      data = ipcAtoms[IpcFrameHeight].formatMess(params[i+1])
-    of "text-active-pixel":
-      data = ipcAtoms[IpcTextActivePixel].formatMess(params[i+1])
-    of "text-inactive-pixel":
-      data = ipcAtoms[IpcTextInactivePixel].formatMess(params[i+1])
-    of "gaps":
-      data = ipcAtoms[IpcGaps].formatMess(params[i+1])
-
-    # This is not as simple as sending a ClientMessage to the root window, 
-    # because a string is involved; therefore, we must first do a bit of 
-    # preparation and then send a data-less msg.
-    of "text-font": 
-      dpy.sendStrPrep(ipcAtoms[IpcTextFont], params[i+1])
-      data = ipcAtoms[IpcTextFont].formatMess()
-    of "frame-left":
-      dpy.sendStrPrep(ipcAtoms[IpcFrameLeft], params[i+1])
-      data = ipcAtoms[IpcFrameLeft].formatMess()
-    of "frame-center":
-      dpy.sendStrPrep(ipcAtoms[IpcFrameCenter], params[i+1])
-      data = ipcAtoms[IpcFrameCenter].formatMess()
-    of "frame-right":
-      dpy.sendStrPrep(ipcAtoms[IpcFrameRight], params[i+1])
-      data = ipcAtoms[IpcFrameRight].formatMess()
-    of "root-menu":
-      dpy.sendStrPrep(ipcAtoms[IpcRootMenu], params[i+1])
-      data = formatMess ipcAtoms[IpcRootMenu]
-    of "close-path":
-      dpy.sendStrPrep(ipcAtoms[IpcClosePath], params[i+1])
-      data = ipcAtoms[IpcClosePath].formatMess()
-    of "maximize-path":
-      dpy.sendStrPrep(ipcAtoms[IpcMaximizePath], params[i+1])
-      data = ipcAtoms[IpcMaximizePath].formatMess()
-    of "decoration-disable":
-      dpy.sendStrPrep(ipcAtoms[IpcDecorationDisable], params[i+1])
-      data = ipcAtoms[IpcDecorationDisable].formatMess()
-    of "text-offset":
-      data = ipcAtoms[IpcTextOffset].formatMess(params[i+1], params[i+2])
-    of "kill-client":
-      data = ipcAtoms[IpcKillClient].formatMess(params[i+1])
-    of "kill-active-client":
-      data = ipcAtoms[IpcKillClient].formatMess()
-    of "close-client":
-      data = ipcAtoms[IpcCloseClient].formatMess(params[i+1])
-    of "close-active-client":
-      data = ipcAtoms[IpcCloseClient].formatMess()
-    of "switch-tag":
-      data = ipcAtoms[IpcSwitchTag].formatMess(params[i+1])
-    of "layout":
-      data = ipcAtoms[IpcLayout].formatMess(getLayoutOrd params[i+1])
-    of "struts":
-      data = ipcAtoms[IpcStruts].formatMess(
-        params[i+1], params[i+2], params[i+3], params[i+4]
-      )
-    of "move-tag":
-      data = ipcAtoms[IpcMoveTag].formatMess(params[i+1], params[i+2])
-    of "move-active-tag":
-      data = ipcAtoms[IpcMoveTag].formatMess(params[i+1])
-    of "master":
-      data = ipcAtoms[IpcMaster].formatMess(params[i+1])
-    of "master-active":
-      data = ipcAtoms[IpcMaster].formatMess()
-    of "float":
-      data = ipcAtoms[IpcFloat].formatMess(params[i+1])
-    of "float-active":
-      data = ipcAtoms[IpcFloat].formatMess()
-    of "button-offset":
-      data = ipcAtoms[IpcButtonOffset].formatMess(params[i+1], params[i+2])
-    of "button-size":
-      data = ipcAtoms[IpcButtonSize].formatMess(params[i+1])
-    of "maximize-client":
-      data = ipcAtoms[IpcMaximizeClient].formatMess(params[i+1])
-    of "maximize-active-client":
-      data = ipcAtoms[IpcMaximizeClient].formatMess()
+    of "border-active-pixel": data = [clong ipcAtoms[IpcBorderActivePixel],
+        clong params[i+1].parseInt, 0, 0, 0]
+    of "border-inactive-pixel": data = [clong ipcAtoms[IpcBorderInactivePixel],
+        clong params[i+1].parseInt, 0, 0, 0]
+    of "border-width": data = [clong ipcAtoms[IpcBorderWidth],
+        clong params[i+1].parseInt, 0, 0, 0]
+    of "frame-active-pixel": data = [clong ipcAtoms[IpcFrameActivePixel],
+        clong params[i+1].parseInt, 0, 0, 0]
+    of "frame-inactive-pixel": data = [clong ipcAtoms[IpcFrameInactivePixel],
+        clong params[i+1].parseInt, 0, 0, 0]
+    of "frame-height": data = [clong ipcAtoms[IpcFrameHeight],
+        clong params[i+1].parseInt, 0, 0, 0]
+    of "text-active-pixel": data = [clong ipcAtoms[IpcTextActivePixel],
+        clong params[i+1].parseInt, 0, 0, 0]
+    of "text-inactive-pixel": data = [clong ipcAtoms[IpcTextInactivePixel],
+        clong params[i+1].parseInt, 0, 0, 0]
+    of "gaps": data = [clong ipcAtoms[IpcGaps],
+        clong params[i+1].parseInt, 0, 0, 0]
+    of "text-font": # This is not as simple as sending a ClientMessage to the root window, because a string is involved; therefore, we must first do a bit of prepreation and then send a data-less msg
+      var fontList = cstring params[i+1]
+      var fontProp: XTextProperty
+      discard dpy.XUtf8TextListToTextProperty(addr fontList, 1,
+          XUTF8StringStyle, addr fontProp)
+      dpy.XSetTextProperty(root, addr fontProp, ipcAtoms[IpcTextFont])
+      discard XFree fontProp.value
+      data = [clong ipcAtoms[IpcTextFont], 0, 0, 0, 0]
+    of "frame-left": # Ditto
+      var fontList = cstring params[i+1]
+      var fontProp: XTextProperty
+      discard dpy.XUtf8TextListToTextProperty(addr fontList, 1,
+          XUTF8StringStyle, addr fontProp)
+      dpy.XSetTextProperty(root, addr fontProp, ipcAtoms[IpcFrameLeft])
+      discard XFree fontProp.value
+      data = [clong ipcAtoms[IpcFrameLeft], 0, 0, 0, 0]
+    of "frame-center": # Ditto
+      var fontList = cstring params[i+1]
+      var fontProp: XTextProperty
+      discard dpy.XUtf8TextListToTextProperty(addr fontList, 1,
+          XUTF8StringStyle, addr fontProp)
+      dpy.XSetTextProperty(root, addr fontProp, ipcAtoms[IpcFrameCenter])
+      discard XFree fontProp.value
+      data = [clong ipcAtoms[IpcFrameCenter], 0, 0, 0, 0]
+    of "frame-right": # Ditto
+      var fontList = cstring params[i+1]
+      var fontProp: XTextProperty
+      discard dpy.XUtf8TextListToTextProperty(addr fontList, 1,
+          XUTF8StringStyle, addr fontProp)
+      dpy.XSetTextProperty(root, addr fontProp, ipcAtoms[IpcFrameRight])
+      discard XFree fontProp.value
+      data = [clong ipcAtoms[IpcFrameRight], 0, 0, 0, 0]
+    of "root-menu": # Ditto
+      var fontList = cstring params[i+1]
+      var fontProp: XTextProperty
+      discard dpy.XUtf8TextListToTextProperty(addr fontList, 1,
+          XUTF8StringStyle, addr fontProp)
+      dpy.XSetTextProperty(root, addr fontProp, ipcAtoms[IpcRootMenu])
+      discard XFree fontProp.value
+      data = [clong ipcAtoms[IpcRootMenu], 0, 0, 0, 0]
+    of "close-path": # Ditto
+      var fontList = cstring params[i+1]
+      var fontProp: XTextProperty
+      discard dpy.XUtf8TextListToTextProperty(addr fontList, 1,
+          XUTF8StringStyle, addr fontProp)
+      dpy.XSetTextProperty(root, addr fontProp, ipcAtoms[IpcClosePath])
+      discard XFree fontProp.value
+      data = [clong ipcAtoms[IpcClosePath], 0, 0, 0, 0]
+    of "maximize-path": # Ditto
+      var fontList = cstring params[i+1]
+      var fontProp: XTextProperty
+      discard dpy.XUtf8TextListToTextProperty(addr fontList, 1,
+          XUTF8StringStyle, addr fontProp)
+      dpy.XSetTextProperty(root, addr fontProp, ipcAtoms[IpcMaximizePath])
+      discard XFree fontProp.value
+      data = [clong ipcAtoms[IpcMaximizePath], 0, 0, 0, 0]
+    of "decoration-disable": # Ditto
+      var fontList = cstring params[i+1]
+      var fontProp: XTextProperty
+      discard dpy.XUtf8TextListToTextProperty(addr fontList, 1,
+          XUTF8StringStyle, addr fontProp)
+      dpy.XSetTextProperty(root, addr fontProp, ipcAtoms[IpcDecorationDisable])
+      discard XFree fontProp.value
+      data = [clong ipcAtoms[IpcDecorationDisable], 0, 0, 0, 0]
+    of "text-offset": data = [clong ipcAtoms[IpcTextOffset],
+        clong params[i+1].parseInt, clong params[i+2].parseInt, 0, 0]
+    of "kill-client": data = [clong ipcAtoms[IpcKillClient], clong params[
+        i+1].parseInt, 0, 0, 0]
+    of "kill-active-client": data = [clong ipcAtoms[IpcKillClient], 0, 0, 0, 0]
+    of "close-client": data = [clong ipcAtoms[IpcCloseClient], clong params[
+        i+1].parseInt, 0, 0, 0]
+    of "close-active-client": data = [clong ipcAtoms[IpcCloseClient], 0, 0, 0, 0]
+    of "switch-tag": data = [clong ipcAtoms[IpcSwitchTag], clong params[
+        i+1].parseInt, 0, 0, 0]
+    of "layout": data = [clong ipcAtoms[IpcLayout], if params[i+1] ==
+        "floating": clong lyFloating elif params[i+1] ==
+        "tiling": clong lyTiling else: quit(1), 0, 0, 0]
+    of "struts": data = [clong ipcAtoms[IpcStruts], clong params[i+1].parseInt,
+        clong params[i+2].parseInt, clong params[i+3].parseInt, clong params[i+4].parseInt]
+    of "move-tag": data = [clong ipcAtoms[IpcMoveTag], clong params[
+        i+1].parseInt, clong params[i+2].parseInt, 0, 0]
+    of "move-active-tag": data = [clong ipcAtoms[IpcMoveTag], clong params[
+        i+1].parseInt, 0, 0, 0]
+    of "master": data = [clong ipcAtoms[IpcMaster], clong params[i+1].parseInt,
+        0, 0, 0]
+    of "master-active": data = [clong ipcAtoms[IpcMaster], 0, 0, 0, 0]
+    of "float": data = [clong ipcAtoms[IpcFloat], clong params[i+1].parseInt, 0, 0, 0]
+    of "float-active": data = [clong ipcAtoms[IpcFloat], 0, 0, 0, 0]
+    of "button-offset": data = [clong ipcAtoms[IpcButtonOffset],
+        clong params[i+1].parseInt, clong params[i+2].parseInt, 0, 0]
+    of "button-size": data = [clong ipcAtoms[IpcButtonSize], clong params[i+1].parseInt, 0, 0, 0]
+    of "maximize-client": data = [clong ipcAtoms[IpcMaximizeClient], clong params[i+1].parseInt, 0, 0, 0]
+    of "maximize-active-client": data = [clong ipcAtoms[IpcMaximizeClient], 0, 0, 0, 0]
     else: discard
-
-    let event = XEvent(
-      xclient: XClientMessageEvent(
-        format: 32,
-        theType: ClientMessage,
-        serial: 0,
-        sendEvent: true,
-        display: dpy,
-        window: root,
-        messageType: ipcAtoms[IpcClientMessage],
-        data: XClientMessageData(l: data)
-      )
-    )
-    discard dpy.XSendEvent(
-      root,
-      false,
-      SubstructureNotifyMask,
-      cast[ptr XEvent](unsafeAddr event)
-    )
+    let event = XEvent(xclient: XClientMessageEvent(format: 32,
+      theType: ClientMessage, serial: 0, sendEvent: true, display: dpy,
+      window: root, messageType: ipcAtoms[IpcClientMessage],
+      data: XClientMessageData(l: data)))
+    discard dpy.XSendEvent(root, false, SubstructureNotifyMask, cast[ptr XEvent](
+          unsafeAddr event))
 
   discard dpy.XFlush
   discard dpy.XSync false
 
-when isMainModule:
-  main()
+when isMainModule: main()

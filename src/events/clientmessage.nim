@@ -4,12 +4,6 @@ import std/[options, strutils]
 import regex
 
 proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
-  log "LOL THIS"
-  log $ev.data.l
-  log $ev.messageType
-  log $(int self.netAtoms[NetWMStateMaximizedHorz])
-  log $(int self.netAtoms[NetWMStateMaximizedVert])
-
   if ev.messageType == self.netAtoms[NetWMState]:
     var clientOpt = self.findClient do (client: Client) ->
         bool: client.window == ev.window
@@ -317,6 +311,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
         client = (co.get)[0][]
       self.maximizeClient client
     elif ev.data.l[0] == clong self.ipcAtoms[IpcSwitchTag]:
+      echo ev.data.l
       self.tags.switchTag uint8 ev.data.l[1] - 1
       self.updateTagState
       let numdesk = [ev.data.l[1] - 1]
@@ -374,6 +369,10 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
         discard self.dpy.XSync false
         discard self.dpy.XFlush
       if self.layout == lyTiling: self.tileWindows
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcAddTag]:
+      discard
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcRemoveTag]:
+      discard
     elif ev.data.l[0] == clong self.ipcAtoms[IpcLayout]:
       # We recieve this IPC event when a client such as wormc wishes to change the layout (eg, floating -> tiling)
       if ev.data.l[1] notin {0, 1}: return

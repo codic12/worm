@@ -8,7 +8,7 @@ Check out the [screenshots on the wiki](https://github.com/codic12/worm/wiki/Scr
 
 ## Build / install
 
-Install Nim >= 1.4.0, for example through Choosenim. Clone this repo and run
+Install Nim >= 1.6.0, for example through Choosenim. Clone this repo and run
 
 ```
 $ nimble build -d:release --gc:arc
