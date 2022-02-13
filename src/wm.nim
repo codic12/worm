@@ -1,5 +1,5 @@
 import
-  std/[options, os, sequtils],
+  std/[options, os, sequtils, strutils],
   x11/[xlib, x, xft, xatom, xinerama, xrender],
   types,
   atoms,
@@ -969,3 +969,42 @@ proc updateTagState*(self: Wm) =
         break
       discard self.dpy.XUnmapWindow client.frame.window
 
+proc raiseClient*(self: var Wm, client: var Client) =
+  for locClient in self.clients.mitems:
+    if locClient != client:
+      discard self.dpy.XSetWindowBorder(locClient.frame.window,
+          self.config.borderInactivePixel)
+      var attr: XWindowAttributes
+      discard self.dpy.XGetWindowAttributes(locClient.window, addr attr)
+      var color: XftColor
+      discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring(
+          "#" & self.config.textInactivePixel.toHex 6), addr color)
+      locClient.color = color
+      for win in [
+        locClient.frame.window,
+        locClient.frame.top,
+        locClient.frame.title,
+        locClient.frame.close,
+        locClient.frame.maximize
+      ]:
+        discard self.dpy.XSetWindowBackground(win, self.config.frameInactivePixel)
+      self.renderTop locClient
+  discard self.dpy.XSetWindowBorder(client.frame.window,
+      self.config.borderActivePixel)
+  var attr: XWindowAttributes
+  discard self.dpy.XGetWindowAttributes(client.window, addr attr)
+  var color: XftColor
+  discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring(
+      "#" & self.config.textActivePixel.toHex 6), addr color)
+  client.color = color
+  for win in [
+    client.frame.window,
+    client.frame.top,
+    client.frame.title,
+    client.frame.close,
+    client.frame.maximize
+  ]:
+    discard self.dpy.XSetWindowBackground(win, self.config.frameActivePixel)
+  self.renderTop client
+  discard self.dpy.XSync false
+  discard self.dpy.XFlush

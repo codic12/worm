@@ -3,7 +3,7 @@ import x11/[xlib, x, xinerama, xatom, xft, xutil]
 import std/[options, strutils]
 import regex
 
-proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
+proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
   if ev.messageType == self.netAtoms[NetWMState]:
     var clientOpt = self.findClient do (client: Client) ->
         bool: client.window == ev.window
@@ -93,13 +93,8 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
     let client = clientOpt.get[0]
     discard self.dpy.XSetInputFocus(client.window, RevertToPointerRoot, CurrentTime)
     discard self.dpy.XRaiseWindow client.frame.window
-    self.renderTop client[]
     self.focused = some clientOpt.get[1]
-    discard self.dpy.XSetWindowBorder(client.frame.window,
-        self.config.borderActivePixel)
-    for i, locClient in self.clients:
-      if uint(i) != clientOpt.get[1]: discard self.dpy.XSetWindowBorder(locClient.frame.window,
-            self.config.borderInactivePixel)
+    self.raiseClient clientOpt.get[0][]
   elif ev.messageType == self.netAtoms[NetCurrentDesktop]:
     self.tags.switchTag uint8 ev.data.l[0]
     self.updateTagState
@@ -121,43 +116,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
       if c.tags == self.tags: lcot = i
     if lcot == -1: return
     self.focused = some uint lcot
-    discard self.dpy.XSetInputFocus(self.clients[self.focused.get].window, RevertToPointerRoot, CurrentTime)
-    discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window,
-      self.config.borderActivePixel)
-    discard self.dpy.XRaiseWindow self.clients[self.focused.get].frame.window
-    for win in [
-      self.clients[self.focused.get].frame.window,
-      self.clients[self.focused.get].frame.top,
-      self.clients[self.focused.get].frame.title,
-      self.clients[self.focused.get].frame.close,
-      self.clients[self.focused.get].frame.maximize
-    ]:
-      discard self.dpy.XSetWindowBackground(win, self.config.frameActivePixel)
-      self.renderTop self.clients[self.focused.get]
-      discard self.dpy.XSync false
-      discard self.dpy.XFlush
-    var fattr: XWindowAttributes
-    discard self.dpy.XGetWindowAttributes(self.clients[self.focused.get].window, addr fattr)
-    var color: XftColor
-    discard self.dpy.XftColorAllocName(fattr.visual, fattr.colormap, cstring(
-        "#" & self.config.textActivePixel.toHex 6), addr color)
-    self.clients[self.focused.get].color = color
-    self.renderTop self.clients[self.focused.get]
-    for i, client in self.clients.mpairs:
-      if self.focused.get.int == i: continue
-      discard self.dpy.XSetWindowBorder(client.frame.window,
-              self.config.borderInactivePixel)
-      for window in [client.frame.top,client.frame.title,client.frame.window,client.frame.close,client.frame.maximize]:
-        discard self.dpy.XSetWindowBackground(window, self.config.frameInactivePixel)
-      var attr: XWindowAttributes
-      discard self.dpy.XGetWindowAttributes(client.window, addr attr)
-      var color: XftColor
-      discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring(
-          "#" & self.config.textInactivePixel.toHex 6), addr color)
-      client.color = color
-      self.renderTop client
-    discard self.dpy.XSync false
-    discard self.dpy.XFlush
+    self.raiseClient self.clients[self.focused.get]
     if self.layout == lyTiling: self.tileWindows
   elif ev.messageType == self.ipcAtoms[IpcClientMessage]: # Register events from our IPC-based event system
     if ev.format != 32: return # check we can access the union member
@@ -197,14 +156,14 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
           4
         )
     elif ev.data.l[0] == clong self.ipcAtoms[IpcFrameInactivePixel]:
-      log "Changing frame pixel to " & $ev.data.l[1]
+      log "Changing frame inactive pixel to " & $ev.data.l[1]
       self.config.frameInactivePixel = uint ev.data.l[1]
       for i, client in self.clients:
         if self.focused.isSome and i == self.focused.get.int: return
         for window in [client.frame.top,client.frame.title,client.frame.window,client.frame.close,client.frame.maximize]: discard self.dpy.XSetWindowBackground(window,
             cuint self.config.frameInactivePixel)
     elif ev.data.l[0] == clong self.ipcAtoms[IpcFrameActivePixel]:
-      log "Changing frame pixel to " & $ev.data.l[1]
+      log "Changing frame active pixel to " & $ev.data.l[1]
       self.config.frameActivePixel = uint ev.data.l[1]
       if self.focused.isNone: return
       for win in [
@@ -246,26 +205,11 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
       log "Chaging text active pixel to " & $ev.data.l[1]
       self.config.textActivePixel = uint ev.data.l[1]
       if self.focused.isNone: return
-      var client = self.clients[self.focused.get]
-      var attr: XWindowAttributes
-      discard self.dpy.XGetWindowAttributes(client.window, addr attr)
-      var color: XftColor
-      discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring(
-          "#" & self.config.textActivePixel.toHex 6), addr color)
-      client.color = color
-      self.renderTop client
+      self.raiseClient self.clients[self.focused.get]
     elif ev.data.l[0] == clong self.ipcAtoms[IpcTextInactivePixel]:
       log "Chaging text inactive pixel to " & $ev.data.l[1]
       self.config.textInactivePixel = uint ev.data.l[1]
-      for i, client in mpairs self.clients:
-        if self.focused.isSome and i == int self.focused.get: continue
-        var attr: XWindowAttributes
-        discard self.dpy.XGetWindowAttributes(client.window, addr attr)
-        var color: XftColor
-        discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring(
-            "#" & self.config.textActivePixel.toHex 6), addr color)
-        client.color = color
-        self.renderTop client
+      self.raiseClient self.clients[self.focused.get]
     elif ev.data.l[0] == clong self.ipcAtoms[IpcTextFont]:
       log "IpcTextFont"
       var fontProp: XTextProperty
@@ -332,42 +276,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent): void =
         if c.tags == self.tags: lcot = i
       if lcot == -1: return
       self.focused = some uint lcot
-      discard self.dpy.XSetInputFocus(self.clients[self.focused.get].window, RevertToPointerRoot, CurrentTime)
-      discard self.dpy.XRaiseWindow self.clients[self.focused.get].frame.window
-      discard self.dpy.XSetWindowBorder(self.clients[self.focused.get].frame.window, self.config.borderActivePixel)
-      for win in [
-        self.clients[self.focused.get].frame.window,
-        self.clients[self.focused.get].frame.top,
-        self.clients[self.focused.get].frame.title,
-        self.clients[self.focused.get].frame.close,
-        self.clients[self.focused.get].frame.maximize
-      ]:
-        discard self.dpy.XSetWindowBackground(win, self.config.frameActivePixel)
-        self.renderTop self.clients[self.focused.get]
-        discard self.dpy.XSync false
-        discard self.dpy.XFlush
-      var fattr: XWindowAttributes
-      discard self.dpy.XGetWindowAttributes(self.clients[self.focused.get].window, addr fattr)
-      var color: XftColor
-      discard self.dpy.XftColorAllocName(fattr.visual, fattr.colormap, cstring(
-          "#" & self.config.textActivePixel.toHex 6), addr color)
-      self.clients[self.focused.get].color = color
-      self.renderTop self.clients[self.focused.get]
-      for i, client in self.clients.mpairs:
-        if self.focused.get.int == i: continue
-        discard self.dpy.XSetWindowBorder(client.frame.window,
-              self.config.borderInactivePixel)
-        for window in [client.frame.top,client.frame.title,client.frame.window,client.frame.close,client.frame.maximize]:
-          discard self.dpy.XSetWindowBackground(window, self.config.frameInactivePixel)
-        var attr: XWindowAttributes
-        discard self.dpy.XGetWindowAttributes(client.window, addr attr)
-        var color: XftColor
-        discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring(
-            "#" & self.config.textInactivePixel.toHex 6), addr color)
-        client.color = color
-        self.renderTop client
-        discard self.dpy.XSync false
-        discard self.dpy.XFlush
+      self.raiseClient self.clients[self.focused.get]
       if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[IpcAddTag]:
       discard
