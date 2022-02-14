@@ -4,6 +4,7 @@ import std/[options, strutils]
 import regex
 
 proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
+  log "THIS"
   if ev.messageType == self.netAtoms[NetWMState]:
     var clientOpt = self.findClient do (client: Client) ->
         bool: client.window == ev.window
@@ -91,8 +92,9 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
         bool: client.window == ev.window
     if clientOpt.isNone: return
     let client = clientOpt.get[0]
-    discard self.dpy.XSetInputFocus(client.window, RevertToPointerRoot, CurrentTime)
     discard self.dpy.XRaiseWindow client.frame.window
+    discard self.dpy.XSetInputFocus(client.window, RevertToPointerRoot, CurrentTime)
+    discard self.dpy.XMapWindow client.frame.window
     self.focused = some clientOpt.get[1]
     self.raiseClient clientOpt.get[0][]
   elif ev.messageType == self.netAtoms[NetCurrentDesktop]:
@@ -276,6 +278,8 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
         if c.tags == self.tags: lcot = i
       if lcot == -1: return
       self.focused = some uint lcot
+      discard self.dpy.XRaiseWindow self.clients[self.focused.get].frame.window
+      discard self.dpy.XSetInputFocus(self.clients[self.focused.get].window, RevertToPointerRoot, CurrentTime)
       self.raiseClient self.clients[self.focused.get]
       if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[IpcAddTag]:
@@ -473,3 +477,14 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
       if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMinimizeClient]:
+      let window = if ev.data.l[1] == 0: self.clients[
+          if self.focused.isSome: self.focused.get else: return].window else: Window ev.data.l[1]
+      var client: Client
+      if self.focused.isSome:
+        client = self.clients[self.focused.get]
+      else:
+        var co = self.findClient do (c: Client) -> bool: c.window == Window ev.data.l[1]
+        if co.isNone: return
+        client = (co.get)[0][]
+      self.minimizeClient client

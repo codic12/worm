@@ -799,12 +799,24 @@ proc tileWindows*(self: var Wm) =
 
     discard self.dpy.XFlush
 
+proc minimizeClient*(
+  self: var Wm;
+  client: var Client
+) =
+
+  if not client.minimized:
+    discard self.dpy.XUnmapWindow(client.frame.window)
+    client.minimized = true
+  else:
+    client.minimized = false
+    discard self.dpy.XMapWindow(client.frame.window)
+
 proc maximizeClient*(
   self: var Wm;
   client: var Client,
   force = false,
   forceun = false
-  ) =
+) =
 
   if (not force and client.maximized) or (force and forceun):
     if client.beforeGeomMax.isNone:

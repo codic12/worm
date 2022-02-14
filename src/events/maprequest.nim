@@ -166,7 +166,6 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
   discard self.dpy.XSetInputFocus(ev.window, RevertToPointerRoot, CurrentTime)
   self.focused = some uint self.clients.len - 1
   self.raiseClient self.clients[self.focused.get]
-
   if self.layout == lyTiling: self.tileWindows
   while true:
     var currEv: XEvent

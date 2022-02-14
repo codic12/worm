@@ -30,6 +30,7 @@ type
     class*: string
     beforeGeomMax*: Option[Geometry]
     maximized*: bool
+    minimized*: bool
   Config* = object
     borderActivePixel*, borderInactivePixel*, borderWidth*: uint
     frameActivePixel*, frameInactivePixel*, frameHeight*: uint

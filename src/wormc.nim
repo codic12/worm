@@ -141,9 +141,13 @@ proc main() =
       data = ipcAtoms[IpcMaximizeClient].formatMess(params[i+1])
     of "maximize-active-client":
       data = ipcAtoms[IpcMaximizeClient].formatMess()
+    of "minimize-client":
+      data = ipcAtoms[IpcMinimizeClient].formatMess(params[i+1])
+    of "minimize-active-client":
+      data = ipcAtoms[IpcMinimizeClient].formatMess()
+
     else: discard
 
-    echo data
     let event = XEvent(
       xclient: XClientMessageEvent(
         format: 32,

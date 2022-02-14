@@ -2,7 +2,7 @@ import
   x11/[xlib, x ]
 
 converter toXBool(x: bool): XBool = x.XBool
-converter toBool(x: XBool): bool = x.bool
+# converter toBool(x: XBool): bool = x.bool
 
 type
   NetAtom* = enum
@@ -75,6 +75,7 @@ type
     IpcClosePath            = "WORM_IPC_CLOSE_PATH",
     IpcMaximizePath         = "WORM_IPC_MAXIMIZE_PATH",
     IpcMaximizeClient       = "WORM_IPC_MAXIMIZE_CLIENT",
+    IpcMinimizeClient       = "WORM_IPC_MINIMIZE_CLIENT",
     IpcDecorationDisable  = "WORM_IPC_DECORATION_DISABLE"
 
 func getNetAtoms*(dpy: ptr Display): array[NetAtom, Atom] =
