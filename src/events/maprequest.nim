@@ -165,21 +165,8 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
   for window in [frame, ev.window, top]: discard self.dpy.XRaiseWindow window
   discard self.dpy.XSetInputFocus(ev.window, RevertToPointerRoot, CurrentTime)
   self.focused = some uint self.clients.len - 1
-  for i, client in self.clients.mpairs:
-    if self.focused.get.int == i: continue
-    discard self.dpy.XSetWindowBorder(client.frame.window,
-          self.config.borderInactivePixel)
-    for window in [client.frame.top,client.frame.title,client.frame.window,client.frame.close,client.frame.maximize]:
-      discard self.dpy.XSetWindowBackground(window, self.config.frameInactivePixel)
-    var attr: XWindowAttributes
-    discard self.dpy.XGetWindowAttributes(client.window, addr attr)
-    var color: XftColor
-    discard self.dpy.XftColorAllocName(attr.visual, attr.colormap, cstring(
-        "#" & self.config.textInactivePixel.toHex 6), addr color)
-    client.color = color
-    self.renderTop client
-    discard self.dpy.XSync false
-    discard self.dpy.XFlush
+  self.raiseClient self.clients[self.focused.get]
+
   if self.layout == lyTiling: self.tileWindows
   while true:
     var currEv: XEvent
