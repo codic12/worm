@@ -4,7 +4,6 @@ import std/[options, strutils]
 import regex
 
 proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
-  log "THIS"
   if ev.messageType == self.netAtoms[NetWMState]:
     var clientOpt = self.findClient do (client: Client) ->
         bool: client.window == ev.window
@@ -372,6 +371,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           of "T": fpTitle
           of "C": fpClose
           of "M": fpMaximize
+          of "I": fpMinimize
           else: continue
       self.config.frameParts.left = parts
       log $self.config.frameParts
@@ -392,6 +392,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           of "T": fpTitle
           of "C": fpClose
           of "M": fpMaximize
+          of "I": fpMinimize
           else: continue
       self.config.frameParts.center = parts
       log $self.config.frameParts
@@ -413,6 +414,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           of "T": fpTitle
           of "C": fpClose
           of "M": fpMaximize
+          of "I": fpMinimize
           else: continue
       self.config.frameParts.right = parts
       log $self.config.frameParts
@@ -461,6 +463,19 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing maximize path to " & $fontList[0]
       self.config.maximizePath = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMinimizePath]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcMinimizePath])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing minimize path to " & $fontList[0]
+      self.config.minimizePath = $fontList[0]
       if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value

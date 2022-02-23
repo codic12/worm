@@ -5,7 +5,7 @@ type
   Layout* = enum
     lyFloating, lyTiling
   FramePart* = enum
-    fpTitle, fpClose, fpMaximize
+    fpTitle, fpClose, fpMaximize, fpMinimize
   Geometry* = object
     x*, y*: int
     width*, height*: uint
@@ -14,7 +14,7 @@ type
     attr*: XWindowAttributes
   Frame* = object
     window*, top*, title*: Window
-    close*, maximize*: Window # button parts
+    close*, maximize*, minimize*: Window # button parts
   Client* = object
     window*: Window
     frame*: Frame
@@ -42,7 +42,7 @@ type
     frameParts*: tuple[left, center, right: seq[FramePart]]
     buttonSize*: uint # always square FOR NOW
     rootMenu*: string
-    closePath*, maximizePath*: string
+    closePath*, maximizePath*, minimizePath*: string
   TagSet* = array[9, bool] # distinct
 
 proc defaultTagSet*: TagSet = [true, false, false, false, false, false, false,

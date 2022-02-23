@@ -259,6 +259,7 @@ proc renderTop*(self: var Wm; client: var Client) =
   var
     closeExists = false
     maximizeExists = false
+    minimizeExists = false
 
   discard self.dpy.XUnmapWindow client.frame.close
   discard self.dpy.XUnmapWindow client.frame.maximize
@@ -283,10 +284,12 @@ proc renderTop*(self: var Wm; client: var Client) =
         leftFrame0 = self.config.frameParts.left[0]
 
         offset =
-          if i == 1 and leftFrame0 in {fpClose, fpMaximize}:
+          if i == 1 and leftFrame0 in {fpClose, fpMaximize, fpMinimize}:
             buttonSize + buttonXOffset
           elif i == 2:
             (buttonSize + buttonXOffset) * 2
+          elif i == 3:
+            (buttonSize + buttonXOffset) * 3
           else:
             0
 
@@ -318,10 +321,14 @@ proc renderTop*(self: var Wm; client: var Client) =
         offset =
           if i == 1 and leftFrame0 == fpTitle:
             extent.width + textXOffset
-          elif i == 1 and leftFrame0 == fpMaximize:
+          elif i == 1 and leftFrame0 in {fpMaximize, fpMinimize}:
             buttonSize + buttonXOffset
-          elif i == 2:
-            extent.width + textXOffset + buttonXOffset + buttonSize
+          elif i == 2 and (leftFrame0 == fpTitle or self.config.frameParts.left[1] == fpTitle):
+            extent.width + textXOffset + 2*buttonXOffset + buttonSize
+          elif i == 2: # no title
+            2*(buttonSize + buttonXOffset)
+          elif i == 3:
+            extent.width + textXOffset + buttonXOffset*2 + buttonSize*2
           else:
             0
 
@@ -348,14 +355,20 @@ proc renderTop*(self: var Wm; client: var Client) =
         leftFrame0 = self.config.frameParts.left[0]
         btnSize = self.config.buttonSize.cint
         btnXOffset = self.config.buttonOffset.x.cint
+        textXOffset = self.config.textOffset.x.cint
+        buttonSize = self.config.buttonSize.cint
 
         offset =
           if i == 1 and leftFrame0 == fpTitle:
             extent.width.cint
-          elif i == 1 and leftFrame0 == fpClose:
+          elif i == 1 and leftFrame0 in {fpClose, fpMinimize}:
             btnSize + btnXOffset
-          elif i == 2:
-            extent.width + btnXOffset + btnSize
+          elif i == 2 and (leftFrame0 == fpTitle or self.config.frameParts.left[1] == fpTitle):
+            extent.width + textXOffset + btnXOffset + buttonSize
+          elif i == 2: # no title
+            2*(buttonSize + btnXOffset)
+          elif i == 3:
+            extent.width + textXOffset + btnXOffset*2 + buttonSize*2
           else:
             0
 
@@ -368,7 +381,44 @@ proc renderTop*(self: var Wm; client: var Client) =
       let image = self.XCreateImage(self.config.maximizePath, fp, attr)
 
       self.XPutImage(image, client.frame.maximize, gc)
+    of fpMinimize: 
+      minimizeExists = true
 
+      if not fileExists self.config.minimizePath:
+        continue
+
+      discard self.dpy.XMapWindow client.frame.minimize
+
+      let
+        leftFrame0 = self.config.frameParts.left[0]
+        btnSize = self.config.buttonSize.cint
+        btnXOffset = self.config.buttonOffset.x.cint
+        textXOffset = self.config.textOffset.x.cint
+        buttonSize = self.config.buttonSize.cint
+
+        offset =
+          if i == 1 and leftFrame0 == fpTitle:
+            extent.width.cint + btnXOffset + textXOffset
+          elif i == 1 and leftFrame0 in {fpClose, fpMaximize}:
+            btnSize + btnXOffset
+          elif i == 2 and (leftFrame0 == fpTitle or self.config.frameParts.left[1] == fpTitle):
+            extent.width + textXOffset + btnXOffset + buttonSize
+          elif i == 2: # no title
+            2*(buttonSize + btnXOffset)
+          elif i == 3:
+            extent.width + textXOffset + btnXOffset*2 + buttonSize*2
+          else:
+            0
+
+      discard self.dpy.XMoveWindow(
+        client.frame.minimize,
+        self.config.buttonOffset.x.cint + offset,
+        self.config.buttonOffset.y.cint
+      )
+
+      let image = self.XCreateImage(self.config.minimizePath, fp, attr)
+
+      self.XPutImage(image, client.frame.minimize, gc)
   for i, part in self.config.frameParts.center:
     case part:
     of fpTitle:
@@ -425,9 +475,11 @@ proc renderTop*(self: var Wm; client: var Client) =
             -(extent.width div 2)
           elif i == 2 and centerFrames[1] == fpTitle:
             btnSize + extent.width div 2
-          elif (i == 1 and centerFrames.len >= 3 and
-                centerFrames[2] == fpMaximize):
-            0
+          elif i == 1 and centerFrames[0] in {fpMaximize, fpMinimize}:
+            btnSize - btnXOffset
+          elif i == 2:
+            # -btnSize
+            btnSize * 2
           else:
             0
         ) + (attr.width div 2) - (
@@ -462,22 +514,22 @@ proc renderTop*(self: var Wm; client: var Client) =
       # M;T;C
       discard self.dpy.XMoveWindow(
         client.frame.maximize,
-        (if i == 0: btnXOffset else: btnXOffset) + (
+        btnXOffset + (
           if i == 1 and centerFrames[0] == fpTitle:
             textXOffset + extent.width div 2
-          elif i == 1 and centerFrames[0] == fpClose and centerFrames.len > 2:
-            -(extent.width div 2) - btnXOffset.cint
-          elif i == 1 and centerFrames[0] == fpClose:
-            btnSize
+          elif i == 1 and centerFrames[0] in {fpClose, fpMinimize}:
+            btnSize - btnXOffset
           elif i == 2 and centerFrames[1] == fpTitle:
             extent.width div 2
-          elif i == 2 and centerFrames[1] == fpClose:
+          elif i == 2 and (centerFrames[0] == fpTitle or centerFrames[1] == fpTitle):
             extent.width div 2 + btnSize + btnXOffset
-          elif i == 0 and centerFrames.len > 2:
+          elif i == 2:
+            btnSize * 2
+          elif i == 0 and centerFrames.len > 2 and (centerFrames[0] == fpTitle or centerFrames[1] == fpTitle):
             # meh
             -(extent.width div 2) - btnXOffset
           elif i == 0:
-            -btnXOffset
+            -btnXOffset * 2
           else:
             0
         ) + (attr.width div 2),
@@ -487,6 +539,58 @@ proc renderTop*(self: var Wm; client: var Client) =
       let image = self.XCreateImage(self.config.maximizePath, fp, attr)
 
       self.XPutImage(image, client.frame.maximize, gc)
+    of fpMinimize:
+      minimizeExists = true
+
+      if not fileExists self.config.minimizePath:
+        continue
+
+      let image = self.XCreateImage(self.config.minimizePath, fp, attr)
+
+      let
+        btnSize = self.config.buttonSize.cint
+        btnXOffset = self.config.buttonOffset.x.cint
+        textXOffset = self.config.textOffset.x.cint
+        centerFrames = self.config.frameParts.center
+
+      discard self.dpy.XMoveWindow(
+        client.frame.minimize,
+        (if i == 0: -btnXOffset else: btnXOffset) + (
+          if (i == 1 and centerFrames[0] == fpTitle and centerFrames.len == 2):
+            textXOffset + extent.width div 2
+          elif (i == 1 and centerFrames[0] == fpTitle and
+                centerFrames.len > 2 and centerFrames[1] in {fpClose, fpMaximize}):
+            -(extent.width div 2) - btnSize - btnXOffset - textXOffset
+          elif i == 1 and centerFrames[0] == fpTitle:
+            (extent.width div 2) + btnXOffset + textXOffset - btnSize
+          elif (i == 1 and centerFrames.len >= 3 and
+                centerFrames[0] in {fpMaximize, fpClose} and centerFrames[2] == fpTitle):
+                # meh
+            -(extent.width div 2)
+          elif i == 2 and (centerFrames[1] == fpTitle or centerFrames[0] == fpTitle):
+            (extent.width div 2) + btnXOffset + textXOffset + btnSize
+          elif i == 2:
+            # ez
+            echo "HIT"
+            btnSize * 2
+          elif (i == 1 and centerFrames.len >= 3 and (centerFrames[0] == fpTitle or centerFrames[1] == fpTitle)):
+            -(extent.width div 2) + btnSize
+          elif i == 1 and centerFrames[0] in {fpMaximize, fpClose}:
+            btnSize - btnXOffset
+          else:
+            0
+        ) + (attr.width div 2) - (
+          if (i == 0 and centerFrames.len > 1 and
+              centerFrames.find(fpTitle) != -1):
+            self.config.buttonSize.cint + extent.width div 2
+          else:
+            0),
+        self.config.buttonOffset.y.cint
+      )
+
+      discard self.dpy.XMapWindow client.frame.minimize
+
+      self.XPutImage(image, client.frame.minimize, gc)
 
   for i, part in self.config.frameParts.right:
 
@@ -507,19 +611,20 @@ proc renderTop*(self: var Wm; client: var Client) =
         self.font,
         (
           if (rightFrames.len == 1 or (rightFrames.len == 2 and i == 1 and
-                  rightFrames[0] in {fpClose, fpMaximize})):
+                  rightFrames[0] in {fpClose, fpMaximize, fpMinimize})):
             attr.width.cint - (extent.width.cint + textXOffset)
           elif (rightFrames.len == 2 and i == 0 and
-                rightFrames[1] in {fpClose, fpMaximize}):
+                rightFrames[1] in {fpClose, fpMaximize, fpMinimize}):
             attr.width.cint - extent.width.cint - textXOffset - btnXOffset - btnSize
           elif (i == 1 and rightFrames.len == 3 and
-                rightFrames[0] in {fpClose, fpMaximize}):
+                rightFrames[0] in {fpClose, fpMaximize, fpMinimize}):
             attr.width.cint - (extent.width.cint + btnSize + btnXOffset)
           elif i == 2:
             attr.width.cint - extent.width.cint - textXOffset
           elif i == 0 and rightFrames.len == 3:
             attr.width.cint - extent.width.cint - btnSize * 2 - btnXOffset * 3
-          else: 0
+          else:
+            0
         ),
         self.config.textOffset.y.cint,
         cast[ptr char](cstring client.title),
@@ -538,6 +643,7 @@ proc renderTop*(self: var Wm; client: var Client) =
       let
         btnXOffset = self.config.buttonOffset.x.cint
         btnYOffset = self.config.buttonOffset.y.cint
+        textXOffset = self.config.textOffset.x.cint
         btnSize = self.config.buttonSize.cint
         rightFrames = self.config.frameParts.right
 
@@ -545,18 +651,20 @@ proc renderTop*(self: var Wm; client: var Client) =
         client.frame.close,
         (if i == 0: - btnXOffset else: btnXOffset) +
           (
-            if i == 1 and rightFrames.len == 2:
-              - self.config.buttonOffset.x.cint*2  #-self.config.buttonSize.cint
-            elif i == 1 and rightFrames.len == 3:
-              - extent.width - btnXOffset
+            if i == 1 and rightFrames.len == 2 and fpTitle notin rightFrames:
+              -btnXOffset*2
+            elif i == 1:
+              -btnSize - btnXOffset*3
             elif i == 0 and rightFrames.len == 2 and rightFrames[1] == fpTitle:
-              - extent.width
-            elif (i == 0 and rightFrames.len == 2 and rightFrames[1] == fpMaximize):
+              - extent.width - btnSize
+            elif (i == 0 and rightFrames.len == 2 and rightFrames[1] in {fpMinimize, fpMaximize}):
               - btnSize - btnXOffset
+            elif i == 0 and rightFrames.len == 3 and fpTitle in rightFrames:
+              - btnSize - textXOffset - btnXOffset - extent.width
             elif i == 0 and rightFrames.len == 3:
-              - btnSize - btnXOffset - extent.width
+              -btnSize * 2 - btnXOffset*2
             elif i == 2:
-              - btnSize
+              - btnXOffset*2
             else:
               0
           ) + attr.width - btnSize - (
@@ -585,27 +693,32 @@ proc renderTop*(self: var Wm; client: var Client) =
         rightFrames = self.config.frameParts.right
         btnSize = self.config.buttonSize.cint
         btnXOffset = self.config.buttonOffset.x.cint
+        textOffset = self.config.textOffset.x.cint
 
         offset =
           if i == 1 and rightFrames[0] == fpTitle and rightFrames.len == 3:
             - btnSize * 2 - btnXOffset
           elif i == 1 and rightFrames[0] == fpTitle:
             - btnSize
-          elif (i == 1 and rightFrames[0] == fpClose and 
+          elif (i == 1 and rightFrames[0] in {fpClose, fpMinimize} and 
                 rightFrames.len == 3 and rightFrames[2] == fpTitle):
-            - extent.width - btnXOffset * 2
-          elif i == 1 and rightFrames[0] == fpClose:
-            - btnXOffset * 2
+            - extent.width - btnXOffset * 2 - textOffset
+          elif i == 1 and fpTitle notin rightFrames and rightFrames.len == 3:
+            - btnSize - btnXOffset*3
+          elif i == 1 and rightFrames[0] in {fpClose, fpMinimize}:
+            - btnXOffset * 3
           elif i == 2:
             - btnXOffset * 2
-          elif i == 0 and rightFrames.len == 2 and rightFrames[1] == fpClose:
-            - btnXOffset * 4 - btnSize
-          elif i == 0 and rightFrames.len > 2 and rightFrames[1] == fpClose:
+          elif i == 0 and rightFrames.len == 2 and rightFrames[1] in {fpClose, fpMinimize}:
+            - btnXOffset * 3 - btnSize
+          elif i == 0 and rightFrames.len > 2 and rightFrames[1] in {fpClose, fpMinimize} and fpTitle in rightFrames:
             - btnXOffset * 3 - btnSize - extent.width
           elif i == 0 and rightFrames.len >= 2 and rightFrames[1] == fpTitle:
-            - extent.width - btnXOffset - btnSize*2
+            - extent.width - btnXOffset*2 - btnSize
           elif i == 0 and rightFrames.len == 1:
             - btnXOffset * 2
+          elif i == 0 and rightFrames.len == 3:
+            - btnSize * 2 - btnXOffset * 4
           else:
             0
 
@@ -619,6 +732,58 @@ proc renderTop*(self: var Wm; client: var Client) =
       let image = self.XCreateImage(self.config.maximizePath, fp, attr)
 
       self.XPutImage(image, client.frame.maximize, gc)
+    of fpMinimize:
+      minimizeExists = true
+
+      if not fileExists self.config.minimizePath:
+        continue
+
+      discard self.dpy.XMapWindow client.frame.minimize
+
+      let
+        rightFrames = self.config.frameParts.right
+        btnSize = self.config.buttonSize.cint
+        btnXOffset = self.config.buttonOffset.x.cint
+
+        offset =
+          if i == 1 and rightFrames[0] == fpTitle and rightFrames.len == 3:
+            - btnSize * 2 - btnXOffset
+          elif i == 1 and rightFrames[0] == fpTitle:
+            - btnSize
+          elif (i == 1 and rightFrames[0] in {fpClose, fpMaximize} and 
+                rightFrames.len == 3 and rightFrames[2] == fpTitle):
+            - extent.width - btnXOffset * 2
+          elif i == 1 and rightFrames.len == 3:
+            - btnXOffset*3 - btnSize
+          elif i == 1:
+            -btnXOffset*2
+          elif i == 2:
+            - btnXOffset * 2
+          elif i == 0 and rightFrames.len == 2 and rightFrames[1] in {fpClose, fpMaximize}:
+            - btnXOffset * 4 - btnSize
+          elif i == 0 and rightFrames.len > 2 and rightFrames[1] in {fpClose, fpMaximize} and fpTitle in rightFrames:
+            - btnXOffset * 3 - btnSize - extent.width
+          elif i == 0 and rightFrames.len >= 2 and rightFrames[1] == fpTitle:
+            - extent.width - btnXOffset*2 - btnSize
+          elif i == 0 and rightFrames.len == 1:
+            - btnXOffset * 2
+          elif i == 0 and rightFrames.len == 3:
+            # we might be doing the plain old I;M;C that everyone loves lol
+            (- btnSize * 2) - (btnXOffset * 4)
+          else:
+            0
+
+      discard self.dpy.XMoveWindow(
+        client.frame.minimize,
+        self.config.buttonOffset.x.cint + offset + attr.width - 
+        self.config.buttonSize.cint,
+        self.config.buttonOffset.y.cint
+      )
+
+      let image = self.XCreateImage(self.config.minimizePath, fp, attr)
+
+      self.XPutImage(image, client.frame.minimize, gc)
+
 
 proc tileWindows*(self: var Wm) =
 

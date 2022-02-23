@@ -99,10 +99,12 @@ proc main() =
     of "maximize-path":
       dpy.sendStrPrep(ipcAtoms[IpcMaximizePath], params[i+1])
       data = ipcAtoms[IpcMaximizePath].formatMess()
+    of "minimize-path":
+      dpy.sendStrPrep(ipcAtoms[IpcMinimizePath], params[i+1])
+      data = ipcAtoms[IpcMinimizePath].formatMess()
     of "decoration-disable":
       dpy.sendStrPrep(ipcAtoms[IpcDecorationDisable], params[i+1])
       data = ipcAtoms[IpcDecorationDisable].formatMess()
-
     of "text-offset":
       data = ipcAtoms[IpcTextOffset].formatMess(params[i+1], params[i+2])
     of "kill-client":

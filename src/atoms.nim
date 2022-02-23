@@ -74,6 +74,7 @@ type
     IpcRootMenu             = "WORM_IPC_ROOT_MENU",
     IpcClosePath            = "WORM_IPC_CLOSE_PATH",
     IpcMaximizePath         = "WORM_IPC_MAXIMIZE_PATH",
+    IpcMinimizePath         = "WORM_IPC_MINIMIZE_PATH",
     IpcMaximizeClient       = "WORM_IPC_MAXIMIZE_CLIENT",
     IpcMinimizeClient       = "WORM_IPC_MINIMIZE_CLIENT",
     IpcDecorationDisable  = "WORM_IPC_DECORATION_DISABLE"

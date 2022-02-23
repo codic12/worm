@@ -48,11 +48,11 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
           NetWMWindowTypeNotification], self.netAtoms[NetWMWindowTypeDesktop]}:
     discard self.dpy.XMapWindow ev.window
     return # Don't manage irregular windows
-  let hints = getProperty[Hints](self.dpy, ev.window, self.dpy.XInternAtom("_MOTIF_WM_HINTS", false))
+  let hints = getProperty[Hints](self.dpy, ev.window, self.dpy.XInternAtom(
+      "_MOTIF_WM_HINTS", false))
   var frameHeight = self.config.frameHeight
-  var csd=false
+  var csd = false
   if hints.isSome and hints.get.flags == 2 and hints.get.decorations == 0:
-    
     frameHeight = 0
     csd = true
   var max = false
@@ -63,11 +63,13 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
       nitem: culong
       baf: culong
       props: ptr cuchar
-    discard self.dpy.XGetWindowProperty(ev.window, self.netAtoms[NetWMState], 0, high clong, false, AnyPropertyType, addr typ, addr fmt, addr nitem, addr baf, addr props)
+    discard self.dpy.XGetWindowProperty(ev.window, self.netAtoms[NetWMState], 0,
+        high clong, false, AnyPropertyType, addr typ, addr fmt, addr nitem,
+        addr baf, addr props)
     props
   if state != nil:
-    log "STATE"
-    if cast[int](state[]) in {int self.netAtoms[NetWMStateMaximizedHorz], int self.netAtoms[NetWMStateMaximizedVert]}:
+    if cast[int](state[]) in {int self.netAtoms[NetWMStateMaximizedHorz],
+        int self.netAtoms[NetWMStateMaximizedVert]}:
       max = true
   var chr: XClassHint
   discard self.dpy.XGetClassHint(ev.window, addr chr)
@@ -81,8 +83,9 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
         frameHeight = 0
   var frameAttr = XSetWindowAttributes(backgroundPixel: culong self.config.frameActivePixel,
       borderPixel: self.config.borderActivePixel, colormap: attr.colormap)
-  let frame = self.dpy.XCreateWindow(self.root, attr.x + self.config.struts.left.cint, attr.y + self.config.struts.top.cint,
-      cuint attr.width, cuint attr.height + cint frameHeight,
+  let frame = self.dpy.XCreateWindow(self.root, attr.x +
+      self.config.struts.left.cint, attr.y + self.config.struts.top.cint, cuint attr.width, cuint attr.height +
+      cint frameHeight,
       cuint self.config.borderWidth, attr.depth,
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
@@ -99,12 +102,19 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
       cuint attr.width, cuint frameHeight, 0, attr.depth,
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
-  let close = self.dpy.XCreateWindow(top, cint attr.width - self.config.buttonSize.cint, 0,
-      self.config.buttonSize.cuint, cuint frameHeight, 0, attr.depth,
+  let close = self.dpy.XCreateWindow(top, cint attr.width -
+      self.config.buttonSize.cint, 0, self.config.buttonSize.cuint, cuint frameHeight,
+      0, attr.depth,
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
-  let maximize = self.dpy.XCreateWindow(top, cint attr.width - self.config.buttonSize.cint, 0,
-      self.config.buttonSize.cuint, cuint frameHeight, 0, attr.depth,
+  let maximize = self.dpy.XCreateWindow(top, cint attr.width -
+      self.config.buttonSize.cint, 0, self.config.buttonSize.cuint, cuint frameHeight,
+      0, attr.depth,
+      InputOutput,
+      attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
+  let minimize = self.dpy.XCreateWindow(top, cint attr.width -
+      self.config.buttonSize.cint, 0, self.config.buttonSize.cuint, cuint frameHeight,
+      0, attr.depth,
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
   for window in [frame, ev.window, top, titleWin]: discard self.dpy.XMapWindow window
@@ -137,8 +147,9 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
          Mod3Mask, Mod2Mask or LockMask,
         LockMask or Mod3Mask, Mod2Mask or Mod3Mask,
         Mod2Mask or LockMask or Mod3Mask]:
-    for win in [close, maximize]: discard self.dpy.XGrabButton(1, mask, win, true, ButtonPressMask or
-        PointerMotionMask, GrabModeAsync, GrabModeAsync, None, None)
+    for win in [close, maximize]: discard self.dpy.XGrabButton(1, mask, win,
+        true, ButtonPressMask or PointerMotionMask, GrabModeAsync, GrabModeAsync,
+            None, None)
   for mask in [uint32 0, Mod2Mask, LockMask,
          Mod3Mask, Mod2Mask or LockMask,
         LockMask or Mod3Mask, Mod2Mask or Mod3Mask,
@@ -146,8 +157,10 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
     discard self.dpy.XGrabButton(1, mask, ev.window, true, ButtonPressMask,
         GrabModeSync, GrabModeSync, None, None)
   self.clients.add Client(window: ev.window, frame: Frame(window: frame,
-      top: top, close: close, maximize: maximize, title: titleWin), draw: draw, color: color,
-      title: $title, tags: self.tags, floating: self.layout == lyFloating, frameHeight: frameHeight, csd: csd, class: $chr.resClass, maximized: max)
+      top: top, close: close, maximize: maximize, minimize: minimize,
+      title: titleWin), draw: draw, color: color,
+      title: $title, tags: self.tags, floating: self.layout == lyFloating,
+      frameHeight: frameHeight, csd: csd, class: $chr.resClass, maximized: max)
   if max:
     self.maximizeClient(self.clients[self.clients.len - 1], true)
   self.updateClientList
