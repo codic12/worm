@@ -734,8 +734,9 @@ proc renderTop*(self: var Wm; client: var Client) =
       self.XPutImage(image, client.frame.maximize, gc)
     of fpMinimize:
       minimizeExists = true
-
       if not fileExists self.config.minimizePath:
+        echo "aw"
+        echo self.config.minimizePath
         continue
 
       discard self.dpy.XMapWindow client.frame.minimize
