@@ -64,7 +64,6 @@ proc handleButtonPress*(self: var Wm; ev: XButtonEvent): void =
       quitMaximize = true
   if quitMaximize: return
   if minimize:
-    echo "did you click this"
     # check if closable
     if self.config.frameParts.left.find(fpMinimize) == -1 and
         self.config.frameParts.center.find(fpMinimize) == -1 and
