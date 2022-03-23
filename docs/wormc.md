@@ -75,6 +75,7 @@ Describes the layout of the frame *on the left side*. This is a comma separated 
  - T for window title
  - C for close button
  - M for maximize button
+ - I for iconify/minimize button
 eg: `wormc frame-left 'T;C;M'
 ### `frame-center(string)` / `frame-right(string)`
 same as frame-left, but for the center and right parts of a frame window.
@@ -88,4 +89,8 @@ Full path to the maximize and close buttons, respectively. If this is unspecifie
 Sets path to the root menu. If this file is valid, upon right-clicking the root window it's executed (assumed to be an executable file). Eg `wormc root-menu ~/worm/examples/jgmenu_run`.
 ### `decoration-disable(string)`
 Disable decorations for all windows which have a class that matches the regex given in `string`. For an example: `wormc decoration-disable '(?i).*firefox.*'`.
-Note: The regex format we use is described at [the nim regex docs page](https://nitely.github.io/nim-regex/regex.html)
+Note: The regex format we use is described at [the nim-regex docs page](https://nitely.github.io/nim-regex/regex.html)
+### `minimize-path(string)`
+Sets the path to the image for the minimize decoration (represented as I for iconify). Ex: `wormc maximize-path ~/.config/worm/min.png`
+### `minimize-client(int) / minimize-active-client`
+Minimize (or "iconify" in traditional X terms) the given client, or the currently focused one in case of the active variant.
