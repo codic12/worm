@@ -147,7 +147,7 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
          Mod3Mask, Mod2Mask or LockMask,
         LockMask or Mod3Mask, Mod2Mask or Mod3Mask,
         Mod2Mask or LockMask or Mod3Mask]:
-    for win in [close, maximize]: discard self.dpy.XGrabButton(1, mask, win,
+    for win in [close, maximize, minimize]: discard self.dpy.XGrabButton(1, mask, win,
         true, ButtonPressMask or PointerMotionMask, GrabModeAsync, GrabModeAsync,
             None, None)
   for mask in [uint32 0, Mod2Mask, LockMask,

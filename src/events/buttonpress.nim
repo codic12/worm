@@ -4,14 +4,16 @@ import std/[os, options, osproc, strutils]
 
 proc handleButtonPress*(self: var Wm; ev: XButtonEvent): void =
   if ev.subwindow == None and ev.window == self.root and ev.button == 3:
-    log "Root menu"
+    log "Root menu triggered (right click on root window). Attempting to launch root menu"
     if self.config.rootMenu != "" and fileExists expandTilde self.config.rootMenu:
       discard startProcess expandTilde self.config.rootMenu
     discard self.dpy.XAllowEvents(ReplayPointer, ev.time)
     return
   #if ev.subwindow == None or ev.window == self.root: return
-  var close = false
-  var maximize = false
+  var
+    close = false
+    maximize = false
+    minimize = false
   var clientOpt = self.findClient do (client: Client) -> bool:
     (
       if ev.window == client.frame.close:
@@ -20,6 +22,9 @@ proc handleButtonPress*(self: var Wm; ev: XButtonEvent): void =
       elif ev.window == client.frame.maximize:
         maximize = true
         maximize
+      elif ev.window == client.frame.minimize:
+        minimize = true
+        minimize
       else:
         false) or client.frame.window == ev.subwindow or client.frame.title == ev.window
   if clientOpt.isNone and ev.button == 1:
@@ -27,8 +32,10 @@ proc handleButtonPress*(self: var Wm; ev: XButtonEvent): void =
     discard self.dpy.XAllowEvents(ReplayPointer, ev.time)
   if clientOpt.isNone: return
   let client = clientOpt.get[0]
-  var quitClose = false
-  var quitMaximize = false
+  var 
+    quitClose = false
+    quitMaximize = false
+    quitMinimize = false
   if close:
     # check if closable
     if self.config.frameParts.left.find(fpClose) == -1 and
@@ -55,6 +62,17 @@ proc handleButtonPress*(self: var Wm; ev: XButtonEvent): void =
     else:
       self.maximizeClient client[]
       quitMaximize = true
+  if quitMaximize: return
+  if minimize:
+    echo "did you click this"
+    # check if closable
+    if self.config.frameParts.left.find(fpMinimize) == -1 and
+        self.config.frameParts.center.find(fpMinimize) == -1 and
+        self.config.frameParts.right.find(fpMinimize) == -1:
+      quitMinimize = false
+    else:
+      self.minimizeClient client[]
+      quitMinimize = true
   if quitMaximize: return
   discard self.dpy.XGrabPointer(client.frame.window, true, PointerMotionMask or
       ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime)
