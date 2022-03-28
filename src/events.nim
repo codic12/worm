@@ -1,8 +1,6 @@
 import
-  std/[os, osproc],
   x11/[x, xlib],
   wm,
-  log,
   events/[
     buttonpress,
     buttonrelease,
@@ -33,10 +31,6 @@ proc dispatchEvent*(self: var Wm; ev: XEvent) =
   else: discard
 
 proc eventLoop*(self: var Wm) =
-  if fileExists expandTilde "~/.config/worm/rc":
-    log "config file found, loading..."
-    discard startProcess expandTilde "~/.config/worm/rc"
-    log "config file loaded!"
   while true:
     discard self.dpy.XNextEvent(unsafeAddr self.currEv)
     self.dispatchEvent self.currEv
