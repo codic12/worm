@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.1.0"
+version       = "0.2.5"
 author        = "codic12"
 description   = "Window manager "
 license       = "MIT"
