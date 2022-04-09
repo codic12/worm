@@ -94,7 +94,7 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
   discard self.dpy.XSelectInput(ev.window, PropertyChangeMask)
   discard self.dpy.XReparentWindow(ev.window, frame, 0,
       cint frameHeight)
-  # WM_NAME must be set for GTK drag&drop and xprop
+  # WM_STATE must be set for GTK drag&drop and xprop
   # https://github.com/i3/i3/blob/dba30fc9879b42e6b89773c81e1067daa2bb6e23/src/x.c#L1065
   let wm_state: uint8 = NormalState
   discard self.dpy.XChangeProperty(
