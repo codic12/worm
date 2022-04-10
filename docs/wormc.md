@@ -10,30 +10,30 @@ A command can have any number of parameters. In theory, all these parameters are
 
 Numbers are always in decimal. Always. There are no exceptions to this rule; colors are also in plain decimal. Eg, this is invalid:
 ```
-$ wormc frame-pixel #00ffff
+$ wormc frame-pixel #ff00ffff
 ```
-Instead, you could use on posix shells `$((16#00ffff))` and have the shell expand it for you. For readability purposes, this is recommended and will be used in this sheet for examples; in fish, this is `(math 00ffff)`.
+Instead, you could use on posix shells `$((16#ff00ffff))` and have the shell expand it for you. For readability purposes, this is recommended and will be used in this sheet for examples; in fish, this is `(math ff00ffff)`.
 
-Before we begin, finally, a note on X11 colors: We use the 3 byte format RRGGBB in our examples. However, transparency is tacked on to the X11 protocol but it's part of the color. While this is technically implementation dependent because it's not part of the X standard, both Xorg and Xephyr seem to use the format AARRGGBB. If you want control over opacity and are running a compositor use this format, unless you know your X server uses a different one.
+Before we begin, finally, a note on X11 colors: While the 3 byte format RRGGBB works in most cases, it's been observed that some compositors assume the 4 byte format AARRGGBB. As a result, we use the AARRGGBB format in the documentation and for all default values and it's recommended you do the same. If you're not using a compositor it's not likely to be an issue, however.
 
 Here is the full list of commands:
 <br>
 ### `border-active-pixel(uint)`
-Sets the border color for the currently active client. Ex: `wormc border-active-pixel $((16#00ffff))`
+Sets the border color for the currently active client. Ex: `wormc border-active-pixel $((16#ff00ffff))`
 ### `border-inactive-pixel(uint)`
-Sets the border color for all inactive clients. Ex: `wormc border-inactive-pixel $((16#000000))`
+Sets the border color for all inactive clients. Ex: `wormc border-inactive-pixel $((16#ff000000))`
 ### `border-width(uint)`
 Sets the border width for all clients, active or not. Ex: `wormc border-width 5`
 ### `frame-active-pixel(uint)`
-Sets the color of the frame (titlebar) for the active window. Ex: `wormc frame-active-pixel $((16#123456))`
+Sets the color of the frame (titlebar) for the active window. Ex: `wormc frame-active-pixel $((16#ff123456))`
 ### `frame-inactive-pixel(uint)`
-Sets the color of the frame (titlebar) for all windows that are inactive. Ex: `wormc frame-inactive-pixel $((16#222222))`
+Sets the color of the frame (titlebar) for all windows that are inactive. Ex: `wormc frame-inactive-pixel $((16#ff222222))`
 ### `frame-height(uint)`
 Sets the height of the frame / titlebar for all clients, active or not. Ex: `wormc frame-height 20`
 ### `text-active-pixel(uint)`
-Sets the color of the text drawn on the titlebar / frame for active windows. Ex: `wormc text-pixel $((16#ffffff))`
+Sets the color of the text drawn on the titlebar / frame for active windows. Ex: `wormc text-pixel $((16#ffffffff))`
 ### `text-inactive-pixel(uint)`
-Sets the color of the text drawn on the titlebar / frame for inactive windows. Ex: `wormc text-pixel $((16#000000))`
+Sets the color of the text drawn on the titlebar / frame for inactive windows. Ex: `wormc text-pixel $((16#ff000000))`
 ### `gaps(uint)`
 Sets the gaps to the specified amount. When in tiling mode, this distance is reserved between the inside parts of windows. See struts for the outside. Ex: `wormc gaps 5`
 ### `text-font(string)`
