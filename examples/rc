@@ -10,10 +10,30 @@ exec sxhkd -c ~/.config/worm/sxhkdrc &
 
 wormc border-width 6
 
-# These add support for pywal
-# wormc border-active-pixel $((16$(sed -n '4p' .cache/wal/colors)))
-# wormc border-inactive-pixel $((16$(sed -n '5p' .cache/wal/colors)))
-# wormc background-pixel $((16$(sed -n '6p' .cache/wal/colors)))
+## pywal support
+# # CONFIGURE
+# pywal_active_index="3" # color3
+# pywal_inactive_index="4" # color4
+#
+# # CODE
+# contrast_text_for () {
+#   # Formula from:
+#   # https://stackoverflow.com/questions/596216/formula-to-determine-perceived-brightness-of-rgb-color
+#   # https://www.w3.org/TR/AERT/#color-contrast
+#   if perl -e "exit ((1 - (0.299 * $((16#${1:0:2})) + 0.587 * $((16#${1:2:2})) + 0.114 * $((16#${1:4:2}))) / 255) > 0.5)"; then
+#     echo $((16#FF000000))
+#   else
+#     echo $((16#FFFFFFFF))
+#   fi
+# }
+# pywal_active="$(sed -n $(($pywal_active_index + 1))p ~/.cache/wal/colors | tail -c +2)"
+# pywal_inactive="$(sed -n $(($pywal_inactive_index + 1))p ~/.cache/wal/colors | tail -c +2)"
+# wormc border-active-pixel $((16#FF$pywal_active))
+# wormc border-inactive-pixel $((16#FF$pywal_inactive))
+# wormc frame-active-pixel $((16#FF$pywal_active))
+# wormc frame-inactive-pixel $((16#FF$pywal_inactive))
+# wormc text-active-pixel $(contrast_text_for $pywal_active)
+# wormc text-inactive-pixel $(contrast_text_for $pywal_inactive)
 
 wormc layout tiling
 wormc struts 75 20 20 20
