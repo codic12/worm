@@ -73,8 +73,9 @@ proc handleButtonPress*(self: var Wm; ev: XButtonEvent): void =
       self.minimizeClient client[]
       quitMinimize = true
   if quitMaximize: return
-  discard self.dpy.XGrabPointer(client.frame.window, true, PointerMotionMask or
-      ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime)
+  if client.window != ev.window:
+    discard self.dpy.XGrabPointer(client.frame.window, true, PointerMotionMask or
+        ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime)
   var attr: XWindowAttributes
   discard self.dpy.XGetWindowAttributes(client.frame.window, addr attr)
   self.motionInfo = some MotionInfo(start: ev, attr: attr)
