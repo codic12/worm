@@ -73,6 +73,7 @@ proc handleButtonPress*(self: var Wm; ev: XButtonEvent): void =
       self.minimizeClient client[]
       quitMinimize = true
   if quitMaximize: return
+  # Workaround for https://github.com/codic12/worm/issues/62
   if client.window != ev.window and client.frame.title != ev.window:
     discard self.dpy.XGrabPointer(client.frame.window, true, PointerMotionMask or
         ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime)
