@@ -96,12 +96,12 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
       cint frameHeight)
   # WM_STATE must be set for GTK drag&drop and xprop
   # https://github.com/i3/i3/blob/dba30fc9879b42e6b89773c81e1067daa2bb6e23/src/x.c#L1065
-  let wm_state: uint8 = NormalState
+  let wm_state: uint32 = NormalState
   discard self.dpy.XChangeProperty(
     ev.window,
     self.dpy.XInternAtom("WM_STATE".cstring, false),
     XaWindow,
-    8,
+    32,
     PropModeReplace,
     cast[cstring](unsafeAddr wm_state),
     1
