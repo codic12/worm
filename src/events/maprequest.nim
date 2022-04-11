@@ -168,6 +168,8 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
         Mod2Mask or LockMask or Mod3Mask]:
     discard self.dpy.XGrabButton(1, mask, ev.window, true, ButtonPressMask,
         GrabModeSync, GrabModeSync, None, None)
+  for win in [close, minimize, maximize]:
+    discard self.dpy.XSelectInput(win, PointerMotionMask)
   self.clients.add Client(window: ev.window, frame: Frame(window: frame,
       top: top, close: close, maximize: maximize, minimize: minimize,
       title: titleWin), draw: draw, color: color,

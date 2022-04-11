@@ -3,6 +3,7 @@ import std/options
 import x11/[xlib, x]
 
 proc handleMotionNotify*(self: var Wm; ev: XMotionEvent): void =
+#   log "MotionNotify"
   #if ev.subwindow == None or ev.window == self.root
   if self.motionInfo.isNone: return
   let clientOpt = self.findClient do (client: Client) ->

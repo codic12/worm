@@ -207,8 +207,6 @@ proc XCreateImage(
   ): PXImage =
   var screen = self.config.createBtnImg(imgPath, framePixel)
 
-  log $attr.depth
-
   var
     bitmap = screen.getBGRXBitmap()
     frameBuffer = addr bitmap[0]
