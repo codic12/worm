@@ -440,42 +440,81 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
       if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
-    elif ev.data.l[0] == clong self.ipcAtoms[IpcClosePath]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcCloseActivePath]:
       var fontProp: XTextProperty
       var fontList: ptr UncheckedArray[cstring]
       var n: cint
       discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
-          IpcClosePath])
+          IpcCloseActivePath])
       let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
           ptr ptr cstring](addr fontList), addr n)
-      log "Changing close path to " & $fontList[0]
-      self.config.closePath = $fontList[0]
+      log "Changing active close path to " & $fontList[0]
+      self.config.closePaths[bsActive] = $fontList[0]
       if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
-    elif ev.data.l[0] == clong self.ipcAtoms[IpcMaximizePath]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcCloseInactivePath]:
       var fontProp: XTextProperty
       var fontList: ptr UncheckedArray[cstring]
       var n: cint
       discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
-          IpcMaximizePath])
+          IpcCloseInactivePath])
       let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
           ptr ptr cstring](addr fontList), addr n)
-      log "Changing maximize path to " & $fontList[0]
-      self.config.maximizePath = $fontList[0]
+      log "Changing inactive close path to " & $fontList[0]
+      self.config.closePaths[bsInactive] = $fontList[0]
       if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
-    elif ev.data.l[0] == clong self.ipcAtoms[IpcMinimizePath]:
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMaximizeActivePath]:
       var fontProp: XTextProperty
       var fontList: ptr UncheckedArray[cstring]
       var n: cint
       discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
-          IpcMinimizePath])
+          IpcMaximizeActivePath])
       let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
           ptr ptr cstring](addr fontList), addr n)
-      log "Changing minimize path to " & $fontList[0]
-      self.config.minimizePath = $fontList[0]
+      log "Changing active maximize path to " & $fontList[0]
+      self.config.maximizePaths[bsActive] = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMaximizeInactivePath]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcMaximizeInactivePath])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing inactive maximize path to " & $fontList[0]
+      self.config.maximizePaths[bsInactive] = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMinimizeActivePath]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcMinimizeActivePath])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing active minimize path to " & $fontList[0]
+      self.config.minimizePaths[bsActive] = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMinimizeInactivePath]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcMinimizeInactivePath])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing inactive minimize path to " & $fontList[0]
+      self.config.minimizePaths[bsInactive] = $fontList[0]
       if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value

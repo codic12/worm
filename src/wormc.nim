@@ -93,15 +93,24 @@ proc main() =
     of "root-menu":
       dpy.sendStrPrep(ipcAtoms[IpcRootMenu], params[i+1])
       data = formatMess ipcAtoms[IpcRootMenu]
-    of "close-path":
-      dpy.sendStrPrep(ipcAtoms[IpcClosePath], params[i+1])
-      data = ipcAtoms[IpcClosePath].formatMess()
-    of "maximize-path":
-      dpy.sendStrPrep(ipcAtoms[IpcMaximizePath], params[i+1])
-      data = ipcAtoms[IpcMaximizePath].formatMess()
-    of "minimize-path":
-      dpy.sendStrPrep(ipcAtoms[IpcMinimizePath], params[i+1])
-      data = ipcAtoms[IpcMinimizePath].formatMess()
+    of "close-active-path":
+      dpy.sendStrPrep(ipcAtoms[IpcCloseActivePath], params[i+1])
+      data = ipcAtoms[IpcCloseActivePath].formatMess()
+    of "close-inactive-path":
+      dpy.sendStrPrep(ipcAtoms[IpcCloseInactivePath], params[i+1])
+      data = ipcAtoms[IpcCloseInactivePath].formatMess()
+    of "maximize-active-path":
+      dpy.sendStrPrep(ipcAtoms[IpcMaximizeActivePath], params[i+1])
+      data = ipcAtoms[IpcMaximizeActivePath].formatMess()
+    of "maximize-inactive-path":
+      dpy.sendStrPrep(ipcAtoms[IpcMaximizeInactivePath], params[i+1])
+      data = ipcAtoms[IpcMaximizeInactivePath].formatMess()
+    of "minimize-active-path":
+      dpy.sendStrPrep(ipcAtoms[IpcMinimizeActivePath], params[i+1])
+      data = ipcAtoms[IpcMinimizeActivePath].formatMess()
+    of "minimize-inactive-path":
+      dpy.sendStrPrep(ipcAtoms[IpcMinimizeInactivePath], params[i+1])
+      data = ipcAtoms[IpcMinimizeInactivePath].formatMess()
     of "decoration-disable":
       dpy.sendStrPrep(ipcAtoms[IpcDecorationDisable], params[i+1])
       data = ipcAtoms[IpcDecorationDisable].formatMess()
