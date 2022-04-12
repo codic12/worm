@@ -76,15 +76,25 @@ Describes the layout of the frame *on the left side*. This is a comma separated 
  - C for close button
  - M for maximize button
  - I for iconify/minimize button
-eg: `wormc frame-left 'T;C;M'
+eg: `wormc frame-left 'T;C;M'`
 ### `frame-center(string)` / `frame-right(string)`
 same as frame-left, but for the center and right parts of a frame window.
 ### `button-size(int)`
 The size (both width and height) of all window buttons. The window buttons don't have to nessecarily be perfect squares. You can use the larger dimension and the rest of the window will just not render. Eg: `wormc button-size 14`
 ### `button-offset(x, y)`
 The offset at both the x and y positions at which buttons on the titlebar (M, C) are located, for example `wormc button-offset 10 10`.
-### `maximize-path / close-path (string)`
-Full path to the maximize and close buttons, respectively. If this is unspecified or the value is invalid, then that part will skip rendering. Eg `wormc maximize-path ~/.config/worm/max.png`.
+### `close-active-path(string) / close-inactive-path(string)`
+Full path to the active and inactive maximize buttons, respectively. If unspecified or invalid the button simply won't render in that state.
+
+Ex. `wormc close-active-path ~/.config/worm/close-active.png`.
+### `maximize-active-path(string) / maximize-inactive-path(string)`
+Full path to the active and inactive maximize buttons, respectively. See [close-active-path](#close-active-pathstring--close-inactive-pathstring).
+
+Ex.`wormc maximize-inactive-path ~/.config/worm/max-inactive.png`.
+### `minimize-active-path(string) / minimize-inactive-path(string)`
+Full path to the active and inactive minimize buttons, respectively. See [close-active-path](#close-active-pathstring--close-inactive-pathstring).
+
+Ex. `wormc minimize-active-path ~/.config/worm/min-active.png`.
 ### `root-menu(string)`
 Sets path to the root menu. If this file is valid, upon right-clicking the root window it's executed (assumed to be an executable file). Eg `wormc root-menu ~/worm/examples/jgmenu_run`.
 ### `decoration-disable(string)`
