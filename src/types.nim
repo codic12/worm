@@ -6,6 +6,8 @@ type
     lyFloating, lyTiling
   FramePart* = enum
     fpTitle, fpClose, fpMaximize, fpMinimize
+  ButtonState* = enum
+    bsActive, bsInactive
   Geometry* = object
     x*, y*: int
     width*, height*: uint
@@ -42,7 +44,9 @@ type
     frameParts*: tuple[left, center, right: seq[FramePart]]
     buttonSize*: uint # always square FOR NOW
     rootMenu*: string
-    closePath*, maximizePath*, minimizePath*: string
+    closePaths*: array[ButtonState, string]
+    maximizePaths*: array[ButtonState, string]
+    minimizePaths*: array[ButtonState, string]
   TagSet* = array[9, bool] # distinct
 
 proc defaultTagSet*: TagSet = [true, false, false, false, false, false, false,

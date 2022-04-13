@@ -247,11 +247,18 @@ proc renderTop*(self: var Wm; client: var Client) =
     gc = self.dpy.XCreateGC(client.frame.close, 0, addr gcVal)
 
   # discard self.dpy.XSetForeground(gc, self.config.textActivePixel)
-  let fp =
-    if self.focused.isSome and client == self.clients[self.focused.get]:
-      self.config.frameActivePixel
-    else:
-      self.config.frameInactivePixel
+  let
+    isFocused = self.focused.isSome and client == self.clients[self.focused.get]
+    fp =
+      if isFocused:
+        self.config.frameActivePixel
+      else:
+        self.config.frameInactivePixel
+    buttonState =
+      if isFocused:
+        bsActive
+      else:
+        bsInactive
 
   # draw the 3 'regions' of the titlebar; left, center, right
   var
@@ -304,7 +311,7 @@ proc renderTop*(self: var Wm; client: var Client) =
 
       closeExists = true
 
-      if not fileExists self.config.closePath:
+      if not fileExists self.config.closePaths[buttonState]:
         continue
 
       discard self.dpy.XMapWindow client.frame.close
@@ -336,7 +343,7 @@ proc renderTop*(self: var Wm; client: var Client) =
         buttonYOffset
       )
 
-      let image = self.XCreateImage(self.config.closePath, fp, attr)
+      let image = self.XCreateImage(self.config.closePaths[buttonState], fp, attr)
 
       self.XPutImage(image, client.frame.close, gc)
 
@@ -344,7 +351,7 @@ proc renderTop*(self: var Wm; client: var Client) =
 
       maximizeExists = true
 
-      if not fileExists self.config.maximizePath:
+      if not fileExists self.config.maximizePaths[buttonState]:
         continue
 
       discard self.dpy.XMapWindow client.frame.maximize
@@ -376,13 +383,13 @@ proc renderTop*(self: var Wm; client: var Client) =
         self.config.buttonOffset.y.cint
       )
 
-      let image = self.XCreateImage(self.config.maximizePath, fp, attr)
+      let image = self.XCreateImage(self.config.maximizePaths[buttonState], fp, attr)
 
       self.XPutImage(image, client.frame.maximize, gc)
     of fpMinimize: 
       minimizeExists = true
 
-      if not fileExists self.config.minimizePath:
+      if not fileExists self.config.minimizePaths[buttonState]:
         continue
 
       discard self.dpy.XMapWindow client.frame.minimize
@@ -414,7 +421,7 @@ proc renderTop*(self: var Wm; client: var Client) =
         self.config.buttonOffset.y.cint
       )
 
-      let image = self.XCreateImage(self.config.minimizePath, fp, attr)
+      let image = self.XCreateImage(self.config.minimizePaths[buttonState], fp, attr)
 
       self.XPutImage(image, client.frame.minimize, gc)
   for i, part in self.config.frameParts.center:
@@ -444,10 +451,10 @@ proc renderTop*(self: var Wm; client: var Client) =
 
       closeExists = true
 
-      if not fileExists self.config.closePath:
+      if not fileExists self.config.closePaths[buttonState]:
         continue
 
-      let image = self.XCreateImage(self.config.closePath, fp, attr)
+      let image = self.XCreateImage(self.config.closePaths[buttonState], fp, attr)
 
       let
         btnSize = self.config.buttonSize.cint
@@ -497,7 +504,7 @@ proc renderTop*(self: var Wm; client: var Client) =
 
       maximizeExists = true
 
-      if not fileExists self.config.maximizePath:
+      if not fileExists self.config.maximizePaths[buttonState]:
         continue
 
       discard self.dpy.XMapWindow client.frame.maximize
@@ -534,16 +541,16 @@ proc renderTop*(self: var Wm; client: var Client) =
         btnYOffset
       )
 
-      let image = self.XCreateImage(self.config.maximizePath, fp, attr)
+      let image = self.XCreateImage(self.config.maximizePaths[buttonState], fp, attr)
 
       self.XPutImage(image, client.frame.maximize, gc)
     of fpMinimize:
       minimizeExists = true
 
-      if not fileExists self.config.minimizePath:
+      if not fileExists self.config.minimizePaths[buttonState]:
         continue
 
-      let image = self.XCreateImage(self.config.minimizePath, fp, attr)
+      let image = self.XCreateImage(self.config.minimizePaths[buttonState], fp, attr)
 
       let
         btnSize = self.config.buttonSize.cint
@@ -633,10 +640,10 @@ proc renderTop*(self: var Wm; client: var Client) =
 
       closeExists = true
 
-      if not fileExists self.config.closePath:
+      if not fileExists self.config.closePaths[buttonState]:
         continue
 
-      let image = self.XCreateImage(self.config.closePath, fp, attr)
+      let image = self.XCreateImage(self.config.closePaths[buttonState], fp, attr)
 
       let
         btnXOffset = self.config.buttonOffset.x.cint
@@ -682,7 +689,7 @@ proc renderTop*(self: var Wm; client: var Client) =
 
       maximizeExists = true
 
-      if not fileExists self.config.maximizePath:
+      if not fileExists self.config.maximizePaths[buttonState]:
         continue
 
       discard self.dpy.XMapWindow client.frame.maximize
@@ -727,13 +734,13 @@ proc renderTop*(self: var Wm; client: var Client) =
         self.config.buttonOffset.y.cint
       )
 
-      let image = self.XCreateImage(self.config.maximizePath, fp, attr)
+      let image = self.XCreateImage(self.config.maximizePaths[buttonState], fp, attr)
 
       self.XPutImage(image, client.frame.maximize, gc)
     of fpMinimize:
       minimizeExists = true
 
-      if not fileExists self.config.minimizePath:
+      if not fileExists self.config.minimizePaths[buttonState]:
         continue
 
       discard self.dpy.XMapWindow client.frame.minimize
@@ -778,7 +785,7 @@ proc renderTop*(self: var Wm; client: var Client) =
         self.config.buttonOffset.y.cint
       )
 
-      let image = self.XCreateImage(self.config.minimizePath, fp, attr)
+      let image = self.XCreateImage(self.config.minimizePaths[buttonState], fp, attr)
 
       self.XPutImage(image, client.frame.minimize, gc)
 
