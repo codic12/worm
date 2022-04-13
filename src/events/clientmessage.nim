@@ -210,6 +210,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
     elif ev.data.l[0] == clong self.ipcAtoms[IpcTextInactivePixel]:
       log "Chaging text inactive pixel to " & $ev.data.l[1]
       self.config.textInactivePixel = uint ev.data.l[1]
+      if self.focused.isNone: return
       self.raiseClient self.clients[self.focused.get]
     elif ev.data.l[0] == clong self.ipcAtoms[IpcTextFont]:
       log "IpcTextFont"
