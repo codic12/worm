@@ -63,6 +63,10 @@ proc handleButtonPress*(self: var Wm; ev: XButtonEvent): void =
       self.maximizeClient client[]
       quitMaximize = true
   if quitMaximize: return
+  # Workaround for https://github.com/codic12/worm/issues/62
+  if client.window != ev.window and client.frame.title != ev.window:
+    discard self.dpy.XGrabPointer(client.frame.window, true, PointerMotionMask or
+        ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime)
   if minimize:
     # check if closable
     if self.config.frameParts.left.find(fpMinimize) == -1 and
@@ -73,10 +77,6 @@ proc handleButtonPress*(self: var Wm; ev: XButtonEvent): void =
       self.minimizeClient client[]
       quitMinimize = true
   if quitMaximize: return
-  # Workaround for https://github.com/codic12/worm/issues/62
-  if client.window != ev.window and client.frame.title != ev.window:
-    discard self.dpy.XGrabPointer(client.frame.window, true, PointerMotionMask or
-        ButtonReleaseMask, GrabModeAsync, GrabModeAsync, None, None, CurrentTime)
   var attr: XWindowAttributes
   discard self.dpy.XGetWindowAttributes(client.frame.window, addr attr)
   self.motionInfo = some MotionInfo(start: ev, attr: attr)
