@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-
+# | NOTE | NOTE | NOTE | NOTE |
+# if you use this configuration, make sure that the paths are all right for the configuration file. this is just an example!!!
+# you would also need things like nitrogen and polybar installed.
 exec nitrogen --restore &
 
 exec polybar top -q -c ~/.config/worm/polybar/config.ini &
