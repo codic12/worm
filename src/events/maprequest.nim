@@ -90,7 +90,7 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
   discard self.dpy.XSelectInput(frame, ExposureMask or SubstructureNotifyMask or
-      SubstructureRedirectMask)
+      SubstructureRedirectMask or EnterWindowMask or LeaveWindowMask)
   discard self.dpy.XSelectInput(ev.window, PropertyChangeMask)
   discard self.dpy.XReparentWindow(ev.window, frame, 0,
       cint frameHeight)
@@ -129,6 +129,7 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
       0, attr.depth,
       InputOutput,
       attr.visual, CWBackPixel or CWBorderPixel or CWColormap, addr frameAttr)
+  for win in [close, maximize, minimize]: discard self.dpy.XSelectInput(win, EnterWindowMask or LeaveWindowMask)
   for window in [frame, ev.window, top, titleWin]: discard self.dpy.XMapWindow window
   let draw = self.dpy.XftDrawCreate(titleWin, attr.visual, attr.colormap)
   var color: XftColor
@@ -167,8 +168,6 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
         Mod2Mask or LockMask or Mod3Mask]:
     discard self.dpy.XGrabButton(1, mask, ev.window, true, ButtonPressMask,
         GrabModeSync, GrabModeSync, None, None)
-  for win in [close, minimize, maximize]:
-    discard self.dpy.XSelectInput(win, PointerMotionMask)
   self.clients.add Client(window: ev.window, frame: Frame(window: frame,
       top: top, close: close, maximize: maximize, minimize: minimize,
       title: titleWin), draw: draw, color: color,

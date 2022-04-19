@@ -12,7 +12,9 @@ import
     maprequest,
     motionnotify,
     propertynotify,
-    unmapnotify
+    unmapnotify,
+    enternotify,
+    leavenotify
   ]
 
 proc dispatchEvent*(self: var Wm; ev: XEvent) =
@@ -28,6 +30,8 @@ proc dispatchEvent*(self: var Wm; ev: XEvent) =
   of ClientMessage: self.handleClientMessage ev.xclient
   of Expose: self.handleExpose ev.xexpose
   of PropertyNotify: self.handlePropertyNotify ev.xproperty
+  of EnterNotify: self.handleEnterNotify ev.xcrossing
+  of LeaveNotify: self.handleLeaveNotify ev.xcrossing
   else: discard
 
 proc eventLoop*(self: var Wm) =
