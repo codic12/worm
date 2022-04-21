@@ -7,7 +7,7 @@ type
   FramePart* = enum
     fpTitle, fpClose, fpMaximize, fpMinimize
   ButtonState* = enum
-    bsActive, bsInactive
+    bsActive, bsInactive, bsActiveHover, bsInactiveHover
   Geometry* = object
     x*, y*: int
     width*, height*: uint
@@ -17,6 +17,7 @@ type
   Frame* = object
     window*, top*, title*: Window
     close*, maximize*, minimize*: Window # button parts
+    closeHovered*, maximizeHovered*, minimizeHovered*: bool # is the button being hovered over? for reading by renderTop, and set by Enter / Leave Notify events.
   Client* = object
     window*: Window
     frame*: Frame

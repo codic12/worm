@@ -254,35 +254,28 @@ proc renderTop*(self: var Wm; client: var Client) =
         self.config.frameActivePixel
       else:
         self.config.frameInactivePixel
-    buttonState =
-      if isFocused:
-        bsActive
-      else:
-        bsInactive
+  var buttonState = if isFocused:
+       bsActive
+     else:
+       bsInactive
+  let buttonStateOrig = buttonState 
 
   # draw the 3 'regions' of the titlebar; left, center, right
-  var
-    closeExists = false
-    maximizeExists = false
-    minimizeExists = false
+  #var
+  #  closeExists = false
+  #  maximizeExists = false
+  #  minimizeExists = false
+  
+  # can't remember why I did this, however it causes issues with hovering.
+  # look into it later.
 
-  discard self.dpy.XUnmapWindow client.frame.close
-  discard self.dpy.XUnmapWindow client.frame.maximize
-
-  # load the image @ path into the frame top at offset (x, y)
-  proc loadImage(path: string; x, y: uint): void =
-    discard
+  #discard self.dpy.XUnmapWindow client.frame.close
+  #discard self.dpy.XUnmapWindow client.frame.maximize
+  #discard self.dpy.XUnmapWindow client.frame.minimize
 
   for i, part in self.config.frameParts.left:
     case part:
     of fpTitle:
-
-      if not closeExists:
-        discard self.dpy.XUnmapWindow client.frame.close
-
-      if not maximizeExists:
-        discard self.dpy.XUnmapWindow client.frame.maximize
-
       let
         buttonSize = self.config.buttonSize.cint
         buttonXOffset = self.config.buttonOffset.x.cint
@@ -308,8 +301,13 @@ proc renderTop*(self: var Wm; client: var Client) =
       )
 
     of fpClose:
-
-      closeExists = true
+      
+      buttonState = if client.frame.closeHovered and buttonStateOrig == bsActive:
+        bsActiveHover
+      elif client.frame.closeHovered and buttonStateOrig == bsInactive:
+        bsInactiveHover
+      else:
+        buttonStateOrig
 
       if not fileExists self.config.closePaths[buttonState]:
         continue
@@ -349,8 +347,6 @@ proc renderTop*(self: var Wm; client: var Client) =
 
     of fpMaximize:
 
-      maximizeExists = true
-
       if not fileExists self.config.maximizePaths[buttonState]:
         continue
 
@@ -387,7 +383,6 @@ proc renderTop*(self: var Wm; client: var Client) =
 
       self.XPutImage(image, client.frame.maximize, gc)
     of fpMinimize: 
-      minimizeExists = true
 
       if not fileExists self.config.minimizePaths[buttonState]:
         continue
@@ -428,9 +423,6 @@ proc renderTop*(self: var Wm; client: var Client) =
     case part:
     of fpTitle:
 
-      if not closeExists:
-        discard self.dpy.XUnmapWindow client.frame.close
-
       let configButtonSize =
         if i == 2:
           self.config.buttonSize.cint
@@ -449,7 +441,12 @@ proc renderTop*(self: var Wm; client: var Client) =
 
     of fpClose:
 
-      closeExists = true
+      buttonState = if client.frame.closeHovered and buttonStateOrig == bsActive:
+        bsActiveHover
+      elif client.frame.closeHovered and buttonStateOrig == bsInactive:
+        bsInactiveHover
+      else:
+        buttonStateOrig
 
       if not fileExists self.config.closePaths[buttonState]:
         continue
@@ -502,8 +499,6 @@ proc renderTop*(self: var Wm; client: var Client) =
 
     of fpMaximize:
 
-      maximizeExists = true
-
       if not fileExists self.config.maximizePaths[buttonState]:
         continue
 
@@ -545,7 +540,6 @@ proc renderTop*(self: var Wm; client: var Client) =
 
       self.XPutImage(image, client.frame.maximize, gc)
     of fpMinimize:
-      minimizeExists = true
 
       if not fileExists self.config.minimizePaths[buttonState]:
         continue
@@ -602,9 +596,6 @@ proc renderTop*(self: var Wm; client: var Client) =
     case part:
     of fpTitle:
 
-      if not closeExists:
-        discard self.dpy.XUnmapWindow client.frame.close
-
       let
         rightFrames = self.config.frameParts.right
         textXOffset = self.config.textOffset.x.cint
@@ -637,9 +628,13 @@ proc renderTop*(self: var Wm; client: var Client) =
       )
 
     of fpClose:
-
-      closeExists = true
-
+  
+      buttonState = if client.frame.closeHovered and buttonStateOrig == bsActive:
+        bsActiveHover
+      elif client.frame.closeHovered and buttonStateOrig == bsInactive:
+        bsInactiveHover
+      else:
+        buttonStateOrig
       if not fileExists self.config.closePaths[buttonState]:
         continue
 
@@ -686,8 +681,6 @@ proc renderTop*(self: var Wm; client: var Client) =
       self.XPutImage(image, client.frame.close, gc)
 
     of fpMaximize:
-
-      maximizeExists = true
 
       if not fileExists self.config.maximizePaths[buttonState]:
         continue
@@ -738,7 +731,6 @@ proc renderTop*(self: var Wm; client: var Client) =
 
       self.XPutImage(image, client.frame.maximize, gc)
     of fpMinimize:
-      minimizeExists = true
 
       if not fileExists self.config.minimizePaths[buttonState]:
         continue

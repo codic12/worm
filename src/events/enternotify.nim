@@ -5,6 +5,16 @@ import x11/xlib
 proc handleEnterNotify*(self: var Wm; ev: XEnterWindowEvent): void =
   for client in self.clients.mitems:
     if client.frame.close == ev.subwindow or client.frame.close == ev.window:
-      echo "Close enter"
-    # echo client.frame.window
-    # echo ev.subwindow
+      client.frame.closeHovered = true
+      echo "ENTER NOTIFY!"
+      self.renderTop client
+      break
+    elif client.frame.maximize == ev.subwindow or client.frame.maximize == ev.window:
+      client.frame.maximizeHovered = true
+      self.renderTop client
+      break
+    elif client.frame.minimize == ev.subwindow or client.frame.minimize == ev.window:
+      client.frame.minimizeHovered = true
+      self.renderTop client
+      break
+    
