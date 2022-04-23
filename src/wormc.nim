@@ -99,18 +99,36 @@ proc main() =
     of "close-inactive-path":
       dpy.sendStrPrep(ipcAtoms[IpcCloseInactivePath], params[i+1])
       data = ipcAtoms[IpcCloseInactivePath].formatMess()
+    of "close-active-hovered-path":
+      dpy.sendStrPrep(ipcAtoms[IpcCloseActiveHoveredPath], params[i+1])
+      data = ipcAtoms[IpcCloseActiveHoveredPath].formatMess()
+    of "close-inactive-hovered-path":
+      dpy.sendStrPrep(ipcAtoms[IpcCloseInactiveHoveredPath], params[i+1])
+      data = ipcAtoms[IpcCloseInactiveHoveredPath].formatMess()
     of "maximize-active-path":
       dpy.sendStrPrep(ipcAtoms[IpcMaximizeActivePath], params[i+1])
       data = ipcAtoms[IpcMaximizeActivePath].formatMess()
     of "maximize-inactive-path":
       dpy.sendStrPrep(ipcAtoms[IpcMaximizeInactivePath], params[i+1])
       data = ipcAtoms[IpcMaximizeInactivePath].formatMess()
+    of "maximize-active-hovered-path":
+      dpy.sendStrPrep(ipcAtoms[IpcMaximizeActiveHoveredPath], params[i+1])
+      data = ipcAtoms[IpcMaximizeActiveHoveredPath].formatMess()
+    of "maximize-inactive-hovered-path":
+      dpy.sendStrPrep(ipcAtoms[IpcMaximizeInactiveHoveredPath], params[i+1])
+      data = ipcAtoms[IpcMaximizeInactiveHoveredPath].formatMess()
     of "minimize-active-path":
       dpy.sendStrPrep(ipcAtoms[IpcMinimizeActivePath], params[i+1])
       data = ipcAtoms[IpcMinimizeActivePath].formatMess()
     of "minimize-inactive-path":
       dpy.sendStrPrep(ipcAtoms[IpcMinimizeInactivePath], params[i+1])
       data = ipcAtoms[IpcMinimizeInactivePath].formatMess()
+    of "minimize-active-hovered-path":
+      dpy.sendStrPrep(ipcAtoms[IpcMinimizeActiveHoveredPath], params[i+1])
+      data = ipcAtoms[IpcMinimizeActiveHoveredPath].formatMess()
+    of "minimize-inactive-hovered-path":
+      dpy.sendStrPrep(ipcAtoms[IpcMinimizeInactiveHoveredPath], params[i+1])
+      data = ipcAtoms[IpcMinimizeInactiveHoveredPath].formatMess()
     of "decoration-disable":
       dpy.sendStrPrep(ipcAtoms[IpcDecorationDisable], params[i+1])
       data = ipcAtoms[IpcDecorationDisable].formatMess()

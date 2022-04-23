@@ -467,6 +467,32 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
       if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcCloseActiveHoveredPath]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcCloseActiveHoveredPath])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing active hovered close path to " & $fontList[0]
+      self.config.closePaths[bsActiveHover] = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcCloseInactiveHoveredPath]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcCloseInactiveHoveredPath])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing inactive hovered close path to " & $fontList[0]
+      self.config.closePaths[bsInactiveHover] = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcMaximizeActivePath]:
       var fontProp: XTextProperty
       var fontList: ptr UncheckedArray[cstring]
@@ -493,6 +519,32 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
       if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMaximizeActiveHoveredPath]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcMaximizeActiveHoveredPath])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing active maximize hovered path to " & $fontList[0]
+      self.config.maximizePaths[bsActiveHover] = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMaximizeInactiveHoveredPath]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcMaximizeInactiveHoveredPath])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing inactive maximize hovered path to " & $fontList[0]
+      self.config.maximizePaths[bsInactiveHover] = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcMinimizeActivePath]:
       var fontProp: XTextProperty
       var fontList: ptr UncheckedArray[cstring]
@@ -516,6 +568,32 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing inactive minimize path to " & $fontList[0]
       self.config.minimizePaths[bsInactive] = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMinimizeActiveHoveredPath]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcMinimizeActiveHoveredPath])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing active minimize hovered path to " & $fontList[0]
+      self.config.minimizePaths[bsActiveHover] = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMinimizeInactiveHoveredPath]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcMinimizeInactiveHoveredPath])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing inactive minimize hovered path to " & $fontList[0]
+      self.config.minimizePaths[bsInactiveHover] = $fontList[0]
       if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value

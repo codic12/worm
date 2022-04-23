@@ -34,6 +34,7 @@ type
     beforeGeomMax*: Option[Geometry]
     maximized*: bool
     minimized*: bool
+  ButtonPaths = array[ButtonState, string]
   Config* = object
     borderActivePixel*, borderInactivePixel*, borderWidth*: uint
     frameActivePixel*, frameInactivePixel*, frameHeight*: uint
@@ -45,13 +46,11 @@ type
     frameParts*: tuple[left, center, right: seq[FramePart]]
     buttonSize*: uint # always square FOR NOW
     rootMenu*: string
-    closePaths*: array[ButtonState, string]
-    maximizePaths*: array[ButtonState, string]
-    minimizePaths*: array[ButtonState, string]
+    closePaths*, minimizePaths*, maximizePaths*: ButtonPaths
   TagSet* = array[9, bool] # distinct
 
 proc defaultTagSet*: TagSet = [true, false, false, false, false, false, false,
-    false, false]
+    false, false] # put the user on tag 1 when the wm starts.
 
 proc switchTag*(self: var TagSet; tag: uint8): void =
   for i, _ in self: self[i] = false
