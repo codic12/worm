@@ -834,183 +834,90 @@ proc renderTop*(self: var Wm; client: var Client) =
       self.XPutImage(image, client.frame.minimize, gc)
 
 
-proc tileWindows*(self: var Wm) =
-
+proc tileWindows*(self: var Wm): void =
   log "Tiling windows"
-
-  var
-    clientLen: uint = 0
-    master: ptr Client = nil
-
-  let struts = self.config.struts
-
+  var clientLen: uint = 0
+  var master: ptr Client = nil
   for i, client in self.clients:
-    if client.fullscreen:
-      return # causes issues
-
-    if client.tags == self.tags and not client.floating:
-    # We only care about clients on the current tag.
-      if master == nil: 
-      # This must be the first client on the tag, otherwise master would not be 
-      # nil; therefore, we promote it to master.
+    if client.fullscreen: return # causes issues
+    if client.tags == self.tags and not client.floating: # We only care about clients on the current tag.
+      if master == nil: # This must be the first client on the tag, otherwise master would not be nil; therefore, we promote it to master.
         master = addr self.clients[i]
       inc clientLen
-
-  if master == nil:
-    return
-
-  if clientLen == 0:
-    return # we got nothing to tile.
-
-  var
-    scrNo: cint
-    scrInfo = cast[ptr UncheckedArray[XineramaScreenInfo]](
-      self.dpy.XineramaQueryScreens(addr scrNo)
-    )
-
+  if master == nil: return
+  if clientLen == 0: return # we got nothing to tile.
+  var scrNo: cint
+  var scrInfo = cast[ptr UncheckedArray[XineramaScreenInfo]](
+      self.dpy.XineramaQueryScreens(addr scrNo))
   # echo cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1)
-  let masterWidth =
-    if clientLen == 1:
-      uint scrInfo[0].width - struts.left.cint -
-      struts.right.cint - self.config.borderWidth.cint*2
-    else:
-      uint scrInfo[0].width shr 1 - struts.left.cint -
-      self.config.borderWidth.cint*2
-
+  let masterWidth = if clientLen == 1:
+    uint scrInfo[0].width - self.config.struts.left.cint -
+        self.config.struts.right.cint - cint self.config.borderWidth*2
+  else:
+    uint scrInfo[0].width shr 1 - self.config.struts.left.cint -
+        cint self.config.borderWidth*2
   log $masterWidth
-
-  let h = (
-    scrInfo[0].height - struts.top.int16 - struts.bottom.int16 -
-    self.config.borderWidth.cint*2
-  ).cuint
-  discard self.dpy.XMoveResizeWindow(
-    master.frame.window,
-    struts.left.cint,
-    struts.top.cint,
-    masterWidth.cuint,
-    h
-  )
-
-  discard self.dpy.XResizeWindow(
-    master.window,
-    masterWidth.cuint,
-    (scrInfo[0].height - struts.top.cint - struts.bottom.cint -
-    master.frameHeight.cint - self.config.borderWidth.cint*2).cuint
-  )
-
-  for win in [master.frame.title, master.frame.top]:
-    discard self.dpy.XResizeWindow(
-      win,
-      masterWidth.cuint,
-      master.frameHeight.cuint
-    )
-
+  discard self.dpy.XMoveResizeWindow(master.frame.window,
+      cint self.config.struts.left, cint self.config.struts.top,
+      cuint masterWidth, cuint scrInfo[0].height -
+      self.config.struts.top.int16 - self.config.struts.bottom.int16 -
+      cint self.config.borderWidth*2)
+  discard self.dpy.XResizeWindow(master.window, cuint masterWidth,
+      cuint scrInfo[0].height - self.config.struts.top.cint -
+      self.config.struts.bottom.cint - master.frameHeight.cint -
+      cint self.config.borderWidth*2)
+  for win in [master.frame.title, master.frame.top]: discard self.dpy.XResizeWindow(win, cuint masterWidth, cuint master.frameHeight)
   self.renderTop master[]
-
   # discard self.dpy.XMoveResizeWindow(master.frame.window, cint self.config.struts.left, cint self.config.struts.top, cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth * 2) - self.config.gaps*2 - int16 self.config.struts.right, cuint scrInfo[0].height - int16(self.config.borderWidth * 2) - int16(self.config.struts.top) - int16(self.config.struts.bottom)) # bring the master window up to cover half the screen
   # discard self.dpy.XResizeWindow(master.window, cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) - self.config.gaps*2 - int16 self.config.struts.right, cuint scrInfo[0].height - int16(self.config.borderWidth*2) - int16(self.config.frameHeight) - int16(self.config.struts.top) - int16(self.config.struts.bottom)) # bring the master window up to cover half the screen
-
   var irrevelantLen: uint = 0
   for i, client in self.clients:
     if client.tags != self.tags or client == master[] or client.floating:
       inc irrevelantLen
       continue
-
     if clientLen == 2:
-      discard self.dpy.XMoveWindow(
-        client.frame.window,
-        (scrInfo[0].width shr 1 + self.config.gaps).cint,
-        struts.top.cint
-      )
-
-      let w =
-        cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) -
-        int16(self.config.borderWidth*2) -
-        self.config.gaps - self.config.struts.right.cint
-
-      discard self.dpy.XResizeWindow(
-        client.frame.top,
-        w,
-        self.config.frameHeight.cuint
-      )
-
-      discard self.dpy.XResizeWindow(
-        client.frame.title,
-        w,
-        self.config.frameHeight.cuint
-      )
-
-      discard self.dpy.XResizeWindow(
-        client.window,
-        w,
-        (scrInfo[0].height - struts.top.cint - struts.bottom.cint -
-        client.frameHeight.cint - self.config.borderWidth.cint*2).cuint
-      )
-
+      discard self.dpy.XMoveWindow(client.frame.window, cint scrInfo[
+          0].width shr 1 + self.config.gaps, cint self.config.struts.top)
+      let w = cuint scrInfo[0].width shr (
+          if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) -
+          self.config.gaps - self.config.struts.right.cint
+      discard self.dpy.XResizeWindow(client.frame.top, w, cuint self.config.frameHeight)
+      discard self.dpy.XResizeWindow(client.frame.title, w, cuint self.config.frameHeight)
+      discard self.dpy.XResizeWindow(client.window, w, cuint scrInfo[
+          0].height - self.config.struts.top.cint -
+          self.config.struts.bottom.cint - client.frameHeight.cint -
+          cint self.config.borderWidth*2)
     else:
-      # How many windows are there in the stack? We must subtract 1 to ignore 
-      # the master window; which we iterate over too.
-      let stackElem = i - int irrevelantLen - 1
-
-      let yGap =
-        if stackElem != 0:
-          self.config.gaps
-        else:
-          0
-
+      let stackElem = i - int irrevelantLen -
+          1 # How many windows are there in the stack? We must subtract 1 to ignore the master window; which we iterate over too.
+      let yGap = if stackElem != 0:
+        self.config.gaps
+      else:
+        0
       # let subStrut = if stackElem = clientLen
       # XXX: the if stackElem == 1: 0 else: self.config.gaps is a huge hack
-      # and also incorrect behavior; while usually un-noticeable it makes the 
-      # top window in the stack bigger by the gaps. Fix this!!
-      let w = (
-        scrInfo[0].width shr (if clientLen == 1: 0 else: 1) -
-        self.config.borderWidth.int16 * 2 - self.config.gaps - struts.right.cint
-      ).cuint
-
-      discard self.dpy.XResizeWindow(
-        client.frame.top,
-        w,
-        self.config.frameHeight.cuint
-      )
-
-      discard self.dpy.XResizeWindow(
-        client.frame.title,
-        w,
-        self.config.frameHeight.cuint
-      ).cint
-
-      var h = (
-        ((scrInfo[0].height.float - struts.bottom.float - struts.top.float) *
-         ((i - irrevelantLen.int) / clientLen.int - 1)).cint + struts.top.cint +
-         (if stackElem == 1: 0 else: self.config.gaps.cint)
-      )
-
-      discard self.dpy.XMoveWindow(
-        client.frame.window,
-        (scrInfo[0].width shr 1 + yGap).cint,
-        h
-      )
-
-      var h2 = (
-        ((scrInfo[0].height - struts.bottom.cint - struts.top.cint) div
-         (clientLen - 1).int16) - self.config.borderWidth.int16*2 -
-         client.frameHeight.int16 - (if stackElem == 1: 0 else: self.config.gaps)
-      ).cuint
-
-      discard self.dpy.XResizeWindow(
-        client.window,
-        w,
-        h2
-      )
-      # the number of windows on the stack is i (the current client) minus the 
-      # master window minus any irrevelant windows
+      # and also incorrect behavior; while usually un-noticeable it makes the top window in the stack bigger by the gaps. Fix this!!
+      let w = cuint scrInfo[0].width shr (
+          if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) -
+          self.config.gaps - self.config.struts.right.cint
+      discard self.dpy.XResizeWindow(client.frame.top, w, cuint self.config.frameHeight)
+      discard self.dpy.XResizeWindow(client.frame.title, w, cuint self.config.frameHeight)
+      discard self.dpy.XMoveWindow(client.frame.window, cint scrInfo[
+          0].width shr 1 + yGap, cint((float(scrInfo[0].height) - (
+          self.config.struts.bottom.float + self.config.struts.top.float)) * ((
+          i - int irrevelantLen) / int clientLen - 1)) +
+          self.config.struts.top.cint + (if stackElem ==
+          1: 0 else: self.config.gaps.cint))
+      discard self.dpy.XResizeWindow(client.window, w, cuint ((scrInfo[
+          0].height - self.config.struts.bottom.cint -
+          self.config.struts.top.cint) div int16(clientLen - 1)) - int16(
+          self.config.borderWidth*2) - int16(client.frameHeight) - (
+          if stackElem == 1: 0 else: self.config.gaps))
+      # the number of windows on the stack is i (the current client) minus the master window minus any irrevelant windows
       # discard self.dpy.XMoveResizeWindow(client.frame.window, cint scrInfo[0].width shr 1, cint(float(scrInfo[0].height) * ((i - int irrevelantLen) / int clientLen - 1)) + cint self.config.gaps, cuint scrInfo[0].width shr 1 - int16(self.config.borderWidth * 2) - self.config.gaps, cuint (scrInfo[0].height div int16(clientLen - 1)) - int16(self.config.struts.bottom) - int16(self.config.borderWidth * 2) - self.config.gaps) # bring the master window up to cover half the screen
       # discard self.dpy.XResizeWindow(client.window, cuint scrInfo[0].width shr (if clientLen == 1: 0 else: 1) - int16(self.config.borderWidth*2) - self.config.gaps, cuint (scrInfo[0].height div int16(clientLen - 1)) - int16(self.config.struts.bottom) - int16(self.config.borderWidth*2) - int16(self.config.frameHeight) - self.config.gaps) # bring the master window up to cover half the screen
-
     self.renderTop self.clients[i]
-
     discard self.dpy.XSync false
-
     discard self.dpy.XFlush
 
 proc minimizeClient*(
