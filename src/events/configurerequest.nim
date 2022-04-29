@@ -13,3 +13,4 @@ proc handleConfigureRequest*(self: var Wm; ev: XConfigureRequestEvent): void =
   let client = clientOpt.get[0]
   if ev.x != 0 and ev.y != 0: discard self.dpy.XMoveWindow(client.frame.window, ev.x, ev.y)
   if self.layout == lyTiling: self.tileWindows
+  self.renderTop client[]

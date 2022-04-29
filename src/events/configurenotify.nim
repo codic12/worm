@@ -11,4 +11,4 @@ proc handleConfigureNotify*(self: var Wm; ev: XConfigureEvent): void =
         cuint ev.height + cint client.frameHeight)
     discard self.dpy.XMoveWindow(client.window, 0, cint client.frameHeight)
   # if self.layout == lyTiling: self.tileWindows
-
+  self.renderTop client[]
