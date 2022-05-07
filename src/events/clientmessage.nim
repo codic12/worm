@@ -354,7 +354,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           clientOpt.get[1]
         else:
           if self.focused.isSome: self.focused.get else: return
-      self.clients[client].floating = true
+      self.clients[client].floating = not self.clients[client].floating
       if self.layout == lyTiling: self.tileWindows
     elif ev.data.l[0] == clong self.ipcAtoms[IpcFrameLeft]:
       var fontProp: XTextProperty
