@@ -38,4 +38,5 @@ proc eventLoop*(self: var Wm) =
   while true:
     discard self.dpy.XNextEvent(unsafeAddr self.currEv)
     self.dispatchEvent self.currEv
+    
 

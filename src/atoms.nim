@@ -76,14 +76,17 @@ type
     IpcCloseInactivePath    = "WORM_IPC_CLOSE_INACTIVE_PATH",
     IpcCloseActiveHoveredPath = "WORM_IPC_CLOSE_ACTIVE_HOVERED_PATH"
     IpcCloseInactiveHoveredPath    = "WORM_IPC_CLOSE_INACTIVE_HOVERED_PATH",
+    IpcClosePath = "WORM_IPC_CLOSE_PATH",
     IpcMaximizeActivePath   = "WORM_IPC_MAXIMIZE_ACTIVE_PATH",
     IpcMaximizeInactivePath = "WORM_IPC_MAXIMIZE_INACTIVE_PATH",
     IpcMaximizeActiveHoveredPath   = "WORM_IPC_MAXIMIZE_ACTIVE_HOVERED_PATH",
     IpcMaximizeInactiveHoveredPath   = "WORM_IPC_MAXIMIZE_INACTIVE_HOVERED_PATH",
+    IpcMaximizePath = "WORM_IPC_MAXIMIZE_PATH",
     IpcMinimizeActivePath   = "WORM_IPC_MINIMIZE_ACTIVE_PATH",
     IpcMinimizeInactivePath = "WORM_IPC_MINIMIZE_INACTIVE_PATH",
     IpcMinimizeActiveHoveredPath   = "WORM_IPC_MINIMIZE_ACTIVE_HOVERED_PATH",
     IpcMinimizeInactiveHoveredPath   = "WORM_IPC_MINIMIZE_INACTIVE_HOVERED_PATH",
+    IpcMinimizePath = "WORM_IPC_MINIMIZE_PATH",
     IpcMaximizeClient       = "WORM_IPC_MAXIMIZE_CLIENT",
     IpcMinimizeClient       = "WORM_IPC_MINIMIZE_CLIENT",
     IpcDecorationDisable  = "WORM_IPC_DECORATION_DISABLE"

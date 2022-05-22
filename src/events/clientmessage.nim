@@ -223,7 +223,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing text font to " & $fontList[0]
       self.font = self.dpy.XftFontOpenName(XDefaultScreen self.dpy, fontList[0])
-      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+      if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcTextOffset]:
@@ -438,7 +438,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing root menu path to " & $fontList[0]
       self.config.rootMenu = $fontList[0]
-      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+      if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcCloseActivePath]:
@@ -451,7 +451,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing active close path to " & $fontList[0]
       self.config.closePaths[bsActive] = $fontList[0]
-      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+      if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcCloseInactivePath]:
@@ -464,7 +464,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing inactive close path to " & $fontList[0]
       self.config.closePaths[bsInactive] = $fontList[0]
-      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+      if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcCloseActiveHoveredPath]:
@@ -477,7 +477,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing active hovered close path to " & $fontList[0]
       self.config.closePaths[bsActiveHover] = $fontList[0]
-      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+      if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcCloseInactiveHoveredPath]:
@@ -490,7 +490,23 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing inactive hovered close path to " & $fontList[0]
       self.config.closePaths[bsInactiveHover] = $fontList[0]
-      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+      if err >= Success and n > 0 and fontList != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcClosePath]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcClosePath])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing close path to " & $fontList[0]
+      self.config.closePaths[bsActive] = $fontList[0]
+      self.config.closePaths[bsInactive] = $fontList[0]
+      self.config.closePaths[bsActiveHover] = $fontList[0]
+      self.config.closePaths[bsInactiveHover] = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcMaximizeActivePath]:
@@ -503,7 +519,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing active maximize path to " & $fontList[0]
       self.config.maximizePaths[bsActive] = $fontList[0]
-      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+      if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcMaximizeInactivePath]:
@@ -516,7 +532,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing inactive maximize path to " & $fontList[0]
       self.config.maximizePaths[bsInactive] = $fontList[0]
-      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+      if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcMaximizeActiveHoveredPath]:
@@ -529,7 +545,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing active maximize hovered path to " & $fontList[0]
       self.config.maximizePaths[bsActiveHover] = $fontList[0]
-      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+      if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcMaximizeInactiveHoveredPath]:
@@ -542,7 +558,23 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing inactive maximize hovered path to " & $fontList[0]
       self.config.maximizePaths[bsInactiveHover] = $fontList[0]
-      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+      if err >= Success and n > 0 and fontList != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMaximizePath]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcMaximizePath])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing maximize path to " & $fontList[0]
+      self.config.maximizePaths[bsActive] = $fontList[0]
+      self.config.maximizePaths[bsInactive] = $fontList[0]
+      self.config.maximizePaths[bsActiveHover] = $fontList[0]
+      self.config.maximizePaths[bsInactiveHover] = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcMinimizeActivePath]:
@@ -555,7 +587,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing active minimize path to " & $fontList[0]
       self.config.minimizePaths[bsActive] = $fontList[0]
-      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+      if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcMinimizeInactivePath]:
@@ -568,12 +600,12 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing inactive minimize path to " & $fontList[0]
       self.config.minimizePaths[bsInactive] = $fontList[0]
-      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+      if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcMinimizeActiveHoveredPath]:
       var fontProp: XTextProperty
-      var fontList: ptr UncheckedArray[cstring]
+      var fontList: ptr UncheckedArray[string]
       var n: cint
       discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
           IpcMinimizeActiveHoveredPath])
@@ -581,7 +613,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing active minimize hovered path to " & $fontList[0]
       self.config.minimizePaths[bsActiveHover] = $fontList[0]
-      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+      if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcMinimizeInactiveHoveredPath]:
@@ -594,7 +626,23 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Changing inactive minimize hovered path to " & $fontList[0]
       self.config.minimizePaths[bsInactiveHover] = $fontList[0]
-      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+      if err >= Success and n > 0 and fontList != nil:
+        XFreeStringList cast[ptr cstring](fontList)
+      discard XFree fontProp.value
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcMinimizePath]:
+      var fontProp: XTextProperty
+      var fontList: ptr UncheckedArray[cstring]
+      var n: cint
+      discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
+          IpcMinimizePath])
+      let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
+          ptr ptr cstring](addr fontList), addr n)
+      log "Changing minimize path to " & $fontList[0]
+      self.config.minimizePaths[bsActive] = $fontList[0]
+      self.config.minimizePaths[bsInactive] = $fontList[0]
+      self.config.minimizePaths[bsActiveHover] = $fontList[0]
+      self.config.minimizePaths[bsInactiveHover] = $fontList[0]
+      if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcDecorationDisable]:
@@ -607,7 +655,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
           ptr ptr cstring](addr fontList), addr n)
       log "Appending to decoration disable list: " & $fontList[0]
       self.noDecorList.add re $fontList[0]
-      if err >= Success and n > 0 and fontList != nil and fontList[0] != nil:
+      if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcMinimizeClient]:
@@ -621,3 +669,5 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
         if co.isNone: return
         client = (co.get)[0][]
       self.minimizeClient client
+
+     

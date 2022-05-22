@@ -105,6 +105,9 @@ proc main() =
     of "close-inactive-hovered-path":
       dpy.sendStrPrep(ipcAtoms[IpcCloseInactiveHoveredPath], params[i+1])
       data = ipcAtoms[IpcCloseInactiveHoveredPath].formatMess()
+    of "close-path":
+      dpy.sendStrPrep(ipcAtoms[IpcClosePath], params[i+1])
+      data = ipcAtoms[IpcClosePath].formatMess()
     of "maximize-active-path":
       dpy.sendStrPrep(ipcAtoms[IpcMaximizeActivePath], params[i+1])
       data = ipcAtoms[IpcMaximizeActivePath].formatMess()
@@ -117,6 +120,9 @@ proc main() =
     of "maximize-inactive-hovered-path":
       dpy.sendStrPrep(ipcAtoms[IpcMaximizeInactiveHoveredPath], params[i+1])
       data = ipcAtoms[IpcMaximizeInactiveHoveredPath].formatMess()
+    of "maximize-path":
+      dpy.sendStrPrep(ipcAtoms[IpcMaximizePath], params[i+1])
+      data = ipcAtoms[IpcMaximizePath].formatMess()
     of "minimize-active-path":
       dpy.sendStrPrep(ipcAtoms[IpcMinimizeActivePath], params[i+1])
       data = ipcAtoms[IpcMinimizeActivePath].formatMess()
@@ -129,6 +135,9 @@ proc main() =
     of "minimize-inactive-hovered-path":
       dpy.sendStrPrep(ipcAtoms[IpcMinimizeInactiveHoveredPath], params[i+1])
       data = ipcAtoms[IpcMinimizeInactiveHoveredPath].formatMess()
+    of "minimize-path":
+      dpy.sendStrPrep(ipcAtoms[IpcMinimizePath], params[i+1])
+      data = ipcAtoms[IpcMinimizePath].formatMess()
     of "decoration-disable":
       dpy.sendStrPrep(ipcAtoms[IpcDecorationDisable], params[i+1])
       data = ipcAtoms[IpcDecorationDisable].formatMess()
