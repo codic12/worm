@@ -1082,6 +1082,15 @@ proc updateClientList*(self: Wm) =
   let wins = self.clients.mapIt(it.window)
 
   if wins.len == 0:
+    discard self.dpy.XChangeProperty(
+      self.root,
+      self.netAtoms[NetClientList],
+      XaWindow,
+      32,
+      PropModeReplace,
+      nil,
+      0
+    )
     return
 
   discard self.dpy.XChangeProperty(
