@@ -83,24 +83,19 @@ same as frame-left, but for the center and right parts of a frame window.
 The size (both width and height) of all window buttons. The window buttons don't have to nessecarily be perfect squares. You can use the larger dimension and the rest of the window will just not render. Eg: `wormc button-size 14`
 ### `button-offset(x, y)`
 The offset at both the x and y positions at which buttons on the titlebar (M, C) are located, for example `wormc button-offset 10 10`.
-### `close-active-path(string) / close-inactive-path(string)`
-Full path to the active and inactive maximize buttons, respectively. If unspecified or invalid the button simply won't render in that state.
-
-Ex. `wormc close-active-path ~/.config/worm/close-active.png`.
-### `maximize-active-path(string) / maximize-inactive-path(string)`
-Full path to the active and inactive maximize buttons, respectively. See [close-active-path](#close-active-pathstring--close-inactive-pathstring).
-
-Ex.`wormc maximize-inactive-path ~/.config/worm/max-inactive.png`.
-### `minimize-active-path(string) / minimize-inactive-path(string)`
-Full path to the active and inactive minimize buttons, respectively. See [close-active-path](#close-active-pathstring--close-inactive-pathstring).
-
-Ex. `wormc minimize-active-path ~/.config/worm/min-active.png`.
 ### `root-menu(string)`
 Sets path to the root menu. If this file is valid, upon right-clicking the root window it's executed (assumed to be an executable file). Eg `wormc root-menu ~/worm/examples/jgmenu_run`.
 ### `decoration-disable(string)`
 Disable decorations for all windows which have a class that matches the regex given in `string`. For an example: `wormc decoration-disable '(?i).*firefox.*'`.
 Note: The regex format we use is described at [the nim-regex docs page](https://nitely.github.io/nim-regex/regex.html)
-### `minimize-path(string)`
-Sets the path to the image for the minimize decoration (represented as I for iconify). Ex: `wormc maximize-path ~/.config/worm/min.png`
-### `minimize-client(int) / minimize-active-client`
-Minimize (or "iconify" in traditional X terms) the given client, or the currently focused one in case of the active variant.
+
+### `{close,minimize,maximize}-path (string)`
+Sets X-active-path, X-inactive-path, X-active-hovered-path, AND X-inactive-hovered-path where X is close, minimize, or maximize. Is an alias for compatibility and convinence with older worm versions.
+### `{close,minimize,maximize}-active-path (string)`
+Sets the path for the appropriate button for active windows only, when not being hovered.
+### `{close,minimize,maximize}-active-hovered-path (string)`
+Sets the path for the appropriate button for active windows only, when being hovered over.
+### `{close,minimize,maximize}-inactive-path (string)`
+Sets the path for the appropriate button for inactive windows only, when not being hovered.
+### `{close,minimize,maximize}-inactive-hovered-path (string)`
+Sets the path for the appropriate button for inactive windows only, when being hovered over.
