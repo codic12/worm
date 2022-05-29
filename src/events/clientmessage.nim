@@ -605,7 +605,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
       discard XFree fontProp.value
     elif ev.data.l[0] == clong self.ipcAtoms[IpcMinimizeActiveHoveredPath]:
       var fontProp: XTextProperty
-      var fontList: ptr UncheckedArray[string]
+      var fontList: ptr UncheckedArray[cstring]
       var n: cint
       discard self.dpy.XGetTextProperty(self.root, addr fontProp, self.ipcAtoms[
           IpcMinimizeActiveHoveredPath])
