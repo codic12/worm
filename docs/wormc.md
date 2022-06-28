@@ -102,4 +102,4 @@ Sets the path for the appropriate button for inactive windows only, when being h
 ### `modifier(uint32)`
 Takes a modifier (defined in, eg, X11/X.h) and sets it as the default for moving/resizing windows. Examples:
   1 << 3 = Mod1Mask = Alt           = 8
-  1 <<   = Mod4Mask = Super/Mod/Win = 32
+  1 << 6 = Mod4Mask = Super/Mod/Win = 64
