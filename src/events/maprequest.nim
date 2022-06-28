@@ -47,6 +47,7 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
           NetWMWindowTypeTooltip], self.netAtoms[
           NetWMWindowTypeNotification], self.netAtoms[NetWMWindowTypeDesktop]}:
     discard self.dpy.XMapWindow ev.window
+    discard self.dpy.XLowerWindow ev.window
     return # Don't manage irregular windows
   let hints = getProperty[Hints](self.dpy, ev.window, self.dpy.XInternAtom(
       "_MOTIF_WM_HINTS", false))

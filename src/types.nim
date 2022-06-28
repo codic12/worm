@@ -47,6 +47,7 @@ type
     buttonSize*: uint # always square FOR NOW
     rootMenu*: string
     closePaths*, minimizePaths*, maximizePaths*: ButtonPaths
+    modifier*: uint32
   TagSet* = array[9, bool] # distinct
 
 proc defaultTagSet*: TagSet = [true, false, false, false, false, false, false,

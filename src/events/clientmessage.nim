@@ -669,5 +669,28 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
         if co.isNone: return
         client = (co.get)[0][]
       self.minimizeClient client
-
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcModifier]:
+      log "Changing modifier to " & $ev.data.l[1]
+      let oldModifier = self.config.modifier
+      self.config.modifier = uint32 ev.data.l[1]
+      let modifier: uint32 = self.config.modifier
+      for button in [1'u8, 3]:
+        discard self.dpy.XUngrabButton(button, oldModifier, self.root)
+        for mask in [
+          modifier, modifier or Mod2Mask, modifier or LockMask,
+          modifier or Mod3Mask, modifier or Mod2Mask or LockMask, modifier or
+          LockMask or Mod3Mask, modifier or Mod2Mask or Mod3Mask, modifier or
+          Mod2Mask or LockMask or Mod3Mask
+        ]:
+          discard self.dpy.XGrabButton(
+            button,
+            mask,
+            self.root,
+            true,
+            ButtonPressMask or PointerMotionMask,
+            GrabModeAsync,
+            GrabModeAsync,
+            None,
+            None
+          )
      

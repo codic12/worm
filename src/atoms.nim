@@ -22,6 +22,7 @@ type
     NetSupportingWMCheck          = "_NET_SUPPORTING_WM_CHECK",
     NetWMStateFullScreen          = "_NET_WM_STATE_FULLSCREEN",
     NetClientList                 = "_NET_CLIENT_LIST",
+    NetClientListStacking         = "_NET_CLIENT_LIST_STACKING",
     NetWMStrutPartial             = "_NET_WM_STRUT_PARTIAL",
     NetWMWindowType               = "_NET_WM_WINDOW_TYPE",
     NetWMWindowTypeNormal         = "_NET_WM_WINDOW_TYPE_NORMAL",
@@ -89,7 +90,8 @@ type
     IpcMinimizePath = "WORM_IPC_MINIMIZE_PATH",
     IpcMaximizeClient       = "WORM_IPC_MAXIMIZE_CLIENT",
     IpcMinimizeClient       = "WORM_IPC_MINIMIZE_CLIENT",
-    IpcDecorationDisable  = "WORM_IPC_DECORATION_DISABLE"
+    IpcDecorationDisable  = "WORM_IPC_DECORATION_DISABLE",
+    IpcModifier = "WORM_IPC_MODIFIER"
 
 func getNetAtoms*(dpy: ptr Display): array[NetAtom, Atom] =
   for atom in NetAtom:

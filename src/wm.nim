@@ -38,10 +38,11 @@ proc initWm*(): Wm =
 
   for button in [1'u8, 3]:
     # list from sxhkd (Mod2Mask NumLock, Mod3Mask ScrollLock, LockMask CapsLock).
+    let modifier: uint32 = Mod1Mask
     for mask in [
-      uint32 Mod1Mask, Mod1Mask or Mod2Mask, Mod1Mask or LockMask,
-      Mod1Mask or Mod3Mask, Mod1Mask or Mod2Mask or LockMask, Mod1Mask or
-      LockMask or Mod3Mask, Mod1Mask or Mod2Mask or Mod3Mask, Mod1Mask or
+      modifier, modifier or Mod2Mask, modifier or LockMask,
+      modifier or Mod3Mask, modifier or Mod2Mask or LockMask, modifier or
+      LockMask or Mod3Mask, modifier or Mod2Mask or Mod3Mask, modifier or
       Mod2Mask or LockMask or Mod3Mask
       ]:
       discard dpy.XGrabButton(
@@ -158,11 +159,12 @@ proc initWm*(): Wm =
       textOffset: (x: uint 10, y: uint 20),
       gaps: 0,
       buttonSize: 14,
-      struts: (top: uint 10, bottom: uint 40, left: uint 10, right: uint 10)
+      struts: (top: uint 10, bottom: uint 40, left: uint 10, right: uint 10),
+      modifier: Mod1Mask
       ),
     tags: defaultTagSet(),
     layout: lyFloating,
-    noDecorList: @[]
+    noDecorList: @[],
   )
 
 func findClient*(
@@ -1081,10 +1083,21 @@ proc maximizeClient*(
 proc updateClientList*(self: Wm) =
   let wins = self.clients.mapIt(it.window)
 
+  # TODO: make NetClientListStacking use actual stacking order.
+
   if wins.len == 0:
     discard self.dpy.XChangeProperty(
       self.root,
       self.netAtoms[NetClientList],
+      XaWindow,
+      32,
+      PropModeReplace,
+      nil,
+      0
+    )
+    discard self.dpy.XChangeProperty(
+      self.root,
+      self.netAtoms[NetClientListStacking],
       XaWindow,
       32,
       PropModeReplace,
@@ -1096,6 +1109,15 @@ proc updateClientList*(self: Wm) =
   discard self.dpy.XChangeProperty(
     self.root,
     self.netAtoms[NetClientList],
+    XaWindow,
+    32,
+    PropModeReplace,
+    cast[cstring](unsafeAddr wins[0]),
+    wins.len.cint
+  )
+  discard self.dpy.XChangeProperty(
+    self.root,
+    self.netAtoms[NetClientListStacking],
     XaWindow,
     32,
     PropModeReplace,

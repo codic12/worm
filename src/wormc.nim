@@ -183,6 +183,9 @@ proc main() =
       data = ipcAtoms[IpcMinimizeClient].formatMess(params[i+1])
     of "minimize-active-client":
       data = ipcAtoms[IpcMinimizeClient].formatMess()
+    of "modifier":
+      data = ipcAtoms[IpcModifier].formatMess(params[i+1])
+
 
     else: discard
 
