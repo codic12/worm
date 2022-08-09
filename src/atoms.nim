@@ -91,6 +91,7 @@ type
     IpcMaximizeClient       = "WORM_IPC_MAXIMIZE_CLIENT",
     IpcMinimizeClient       = "WORM_IPC_MINIMIZE_CLIENT",
     IpcDecorationDisable  = "WORM_IPC_DECORATION_DISABLE",
+    IpcFocusMode = "WORM_IPC_FOCUS_MODE",
     IpcModifier = "WORM_IPC_MODIFIER"
 
 func getNetAtoms*(dpy: ptr Display): array[NetAtom, Atom] =

@@ -693,4 +693,8 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
             None,
             None
           )
-     
+    elif ev.data.l[0] == clong self.ipcAtoms[IpcFocusMode]:
+      if ev.data.l[1] == 1:
+        self.focusMode = FocusFollowsClick
+      else:
+        self.focusMode = FocusFollowsMouse

@@ -103,3 +103,7 @@ Sets the path for the appropriate button for inactive windows only, when being h
 Takes a modifier (defined in, eg, X11/X.h) and sets it as the default for moving/resizing windows. Examples:
   1 << 3 = Mod1Mask = Alt           = 8
   1 << 6 = Mod4Mask = Super/Mod/Win = 64
+### `focus-mode(int)`
+Sets the focus mode.
+  1: is focus-follows-click (like Microsoft Windows).
+  2: is the traditional X11 focus-follows-mouse.

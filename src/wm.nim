@@ -25,6 +25,7 @@ type
     tags*: TagSet
     layout*: Layout
     noDecorList*: seq[Regex]
+    focusMode*: FocusMode
 
 proc initWm*(): Wm =
   let dpy = XOpenDisplay nil
@@ -165,6 +166,7 @@ proc initWm*(): Wm =
     tags: defaultTagSet(),
     layout: lyFloating,
     noDecorList: @[],
+    focusMode: FocusFollowsClick
   )
 
 func findClient*(

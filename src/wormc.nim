@@ -185,7 +185,8 @@ proc main() =
       data = ipcAtoms[IpcMinimizeClient].formatMess()
     of "modifier":
       data = ipcAtoms[IpcModifier].formatMess(params[i+1])
-
+    of "focus-mode":
+      data = ipcAtoms[IpcFocusMode].formatMess(params[i+1])
 
     else: discard
 

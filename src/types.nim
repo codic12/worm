@@ -49,6 +49,8 @@ type
     closePaths*, minimizePaths*, maximizePaths*: ButtonPaths
     modifier*: uint32
   TagSet* = array[9, bool] # distinct
+  FocusMode* = enum
+    FocusFollowsClick, FocusFollowsMouse
 
 proc defaultTagSet*: TagSet = [true, false, false, false, false, false, false,
     false, false] # put the user on tag 1 when the wm starts.
