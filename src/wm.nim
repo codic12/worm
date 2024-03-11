@@ -24,7 +24,7 @@ type
     focused*: Option[uint]
     tags*: TagSet
     layout*: Layout
-    noDecorList*: seq[Regex]
+    noDecorList*: seq[Regex2]
     focusMode*: FocusMode
 
 proc initWm*(): Wm =
@@ -169,7 +169,7 @@ proc initWm*(): Wm =
     focusMode: FocusFollowsClick
   )
 
-func findClient*(
+proc findClient*(
   self: var Wm;
   predicate: proc(client: Client): bool
   ): Option[(ptr Client, uint)] =

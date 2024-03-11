@@ -17,7 +17,7 @@ proc handlePropertyNotify*(self: var Wm; ev: XPropertyEvent): void =
         addr atr, addr afr, addr nr, addr bar, addr prop_return)
     if prop_return == nil: discard self.dpy.XFetchName(ev.window, cast[
         ptr cstring](addr prop_return))
-    $cstring prop_return
+    $cast[cstring](prop_return)
   if client.title == title: return
   client.title = title
   self.renderTop client[]
