@@ -169,7 +169,7 @@ proc initWm*(): Wm =
     focusMode: FocusFollowsClick
   )
 
-func findClient*(
+proc findClient*(
   self: var Wm;
   predicate: proc(client: Client): bool
   ): Option[(ptr Client, uint)] =
