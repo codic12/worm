@@ -76,9 +76,9 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
   discard self.dpy.XGetClassHint(ev.window, addr chr)
   block:
     for thing in self.noDecorList:
-      var m: RegexMatch
+      var m: RegexMatch2
       log $chr.resClass
-      log $thing
+      log $Regex(thing)
       if ($chr.resClass).match thing:
         csd = true
         frameHeight = 0
