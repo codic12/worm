@@ -654,7 +654,7 @@ proc handleClientMessage*(self: var Wm; ev: XClientMessageEvent) =
       let err = self.dpy.XmbTextPropertyToTextList(addr fontProp, cast[
           ptr ptr cstring](addr fontList), addr n)
       log "Appending to decoration disable list: " & $fontList[0]
-      self.noDecorList.add re $fontList[0]
+      self.noDecorList.add re2 $fontList[0]
       if err >= Success and n > 0 and fontList != nil:
         XFreeStringList cast[ptr cstring](fontList)
       discard XFree fontProp.value

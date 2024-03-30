@@ -41,11 +41,11 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
     flags, functions, decorations: culong
     inputMode: clong
     status: culong
-  if wintype.isSome and wintype.get in {self.netAtoms[
+  if wintype.isSome and wintype.get in [self.netAtoms[
       NetWMWindowTypeDock], self.netAtoms[NetWMWindowTypeDropdownMenu],
           self.netAtoms[NetWMWindowTypePopupMenu], self.netAtoms[
           NetWMWindowTypeTooltip], self.netAtoms[
-          NetWMWindowTypeNotification], self.netAtoms[NetWMWindowTypeDesktop]}:
+          NetWMWindowTypeNotification], self.netAtoms[NetWMWindowTypeDesktop]]:
     discard self.dpy.XMapWindow ev.window
     discard self.dpy.XLowerWindow ev.window
     return # Don't manage irregular windows
@@ -63,22 +63,22 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
       fmt: cint
       nitem: culong
       baf: culong
-      props: ptr cuchar
+      props: ptr char
     discard self.dpy.XGetWindowProperty(ev.window, self.netAtoms[NetWMState], 0,
         high clong, false, AnyPropertyType, addr typ, addr fmt, addr nitem,
         addr baf, addr props)
     props
   if state != nil:
-    if cast[int](state[]) in {int self.netAtoms[NetWMStateMaximizedHorz],
-        int self.netAtoms[NetWMStateMaximizedVert]}:
+    if cast[int](state[]) in [int self.netAtoms[NetWMStateMaximizedHorz],
+        int self.netAtoms[NetWMStateMaximizedVert]]:
       max = true
   var chr: XClassHint
   discard self.dpy.XGetClassHint(ev.window, addr chr)
   block:
     for thing in self.noDecorList:
-      var m: RegexMatch
+      var m: RegexMatch2
       log $chr.resClass
-      log $thing
+      log $Regex(thing)
       if ($chr.resClass).match thing:
         csd = true
         frameHeight = 0
@@ -147,7 +147,7 @@ proc handleMapRequest*(self: var Wm; ev: XMapRequestEvent): void =
         addr atr, addr afr, addr nr, addr bar, addr prop_return)
     if prop_return == nil: discard self.dpy.XFetchName(ev.window, cast[
         ptr cstring](addr prop_return))
-    cstring prop_return
+    cast[cstring](prop_return)
   if title == nil: title = "Unnamed Window" # why the heck does this window not have a name?!
   for button in [1'u8, 3]:
     for mask in [uint32 0, Mod2Mask, LockMask,
