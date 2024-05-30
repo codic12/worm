@@ -1137,6 +1137,16 @@ proc updateClientList*(self: Wm) =
 proc updateTagState*(self: Wm) =
   for client in self.clients:
     for i, tag in client.tags:
+      if tag:
+        discard self.dpy.XChangeProperty(
+          client.window,
+          self.netAtoms[NetWMDesktop],
+          XaCardinal,
+          32,
+          PropModeReplace,
+          cast[cstring](unsafeAddr i),
+          1
+        )
       if self.tags[i] and tag:
         discard self.dpy.XMapWindow client.frame.window
         break
