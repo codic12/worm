@@ -33,7 +33,7 @@ proc handleMotionNotify*(self: var Wm; ev: XMotionEvent): void =
   let conf = XConfigureEvent(theType: ConfigureNotify, display: self.dpy,
       event: client.window, window: client.window, x: motionInfo.attr.x + (
       if motionInfo.start.button == 1: xdiff else: 0), y: motionInfo.attr.y + (
-      if motionInfo.start.button == 1: ydiff else: 0), width: cint 1.max(
+      if motionInfo.start.button == 1: ydiff else: 0) + client.frameHeight.int32, width: cint 1.max(
           motionInfo.attr.width + (if motionInfo.start.button ==
               3: xdiff else: 0)).cuint, height: cint 1.max(
           motionInfo.attr.height +

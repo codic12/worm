@@ -1076,6 +1076,13 @@ proc maximizeClient*(
     0
   )
 
+  let conf = XConfigureEvent(theType: ConfigureNotify, display: self.dpy,
+      event: client.window, window: client.window, x: (strut.left + x.uint).cint,
+      y: (strut.top + y.uint + client.frameHeight.uint).cint, width: masterWidth.cint,
+      height: (height - strut.top - strut.bottom - self.config.borderWidth.cuint*2 - client.frameHeight).cint)
+  discard self.dpy.XSendEvent(client.window, false, StructureNotifyMask, cast[
+      ptr XEvent](unsafeAddr conf))
+
   discard self.dpy.XSync false
 
   discard self.dpy.XFlush
