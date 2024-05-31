@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        nim: [ '1.4.8', 'stable', 'devel' ]
+        nim: [ 'stable' ] 
     name: Nim ${{ matrix.nim }} worm build
     steps:
       - uses: actions/checkout@v2
